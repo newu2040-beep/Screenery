@@ -142,6 +142,7 @@ class RecordingRepository(private val context: Context) {
         val autoStop = prefs.getInt("cfg_autostop", 0)
         val hideStatusBar = prefs.getBoolean("cfg_hide_statusbar", false)
         val autoSave = prefs.getBoolean("cfg_autosave_gallery", true)
+        val isCompact = prefs.getBoolean("cfg_compact_mode", false)
         val themeOrdinal = prefs.getInt("cfg_theme_mode", AppThemeMode.SYSTEM.ordinal)
         val pastelOrdinal = prefs.getInt("cfg_pastel_theme", PastelTheme.LAVENDER.ordinal)
         val userName = prefs.getString("cfg_user_name", "Creator") ?: "Creator"
@@ -171,6 +172,7 @@ class RecordingRepository(private val context: Context) {
             autoStopMinutes = autoStop,
             hideStatusBar = hideStatusBar,
             autoSaveToGallery = autoSave,
+            isCompactMode = isCompact,
             themeMode = themeMode,
             pastelTheme = pastelTheme,
             userName = userName,
@@ -195,6 +197,7 @@ class RecordingRepository(private val context: Context) {
             .putInt("cfg_autostop", config.autoStopMinutes)
             .putBoolean("cfg_hide_statusbar", config.hideStatusBar)
             .putBoolean("cfg_autosave_gallery", config.autoSaveToGallery)
+            .putBoolean("cfg_compact_mode", config.isCompactMode)
             .putInt("cfg_theme_mode", config.themeMode.ordinal)
             .putInt("cfg_pastel_theme", config.pastelTheme.ordinal)
             .putString("cfg_user_name", config.userName)

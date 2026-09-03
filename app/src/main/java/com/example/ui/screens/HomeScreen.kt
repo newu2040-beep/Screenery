@@ -5,6 +5,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,7 +31,9 @@ import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DensityMedium
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
@@ -51,6 +54,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -74,6 +78,8 @@ import com.example.data.model.DeviceCapability
 import com.example.data.model.RecordingConfig
 import com.example.data.model.RecordingItem
 import com.example.service.RecordingStatus
+import com.example.ui.theme.LocalCompactMode
+import com.example.ui.theme.LocalExpressiveDimens
 import com.example.ui.theme.ScreeneryRecordRed
 import com.example.ui.theme.ScreeneryRecordRedGlow
 import java.text.SimpleDateFormat
@@ -91,6 +97,7 @@ fun HomeScreen(
     onStopRecordingClick: () -> Unit,
     onEditProfileClick: () -> Unit,
     onToggleThemeModeClick: () -> Unit,
+    onToggleCompactModeClick: () -> Unit,
     onSeeAllQuickSettings: () -> Unit,
     onSeeAllRecordings: () -> Unit,
     onPlayRecording: (RecordingItem) -> Unit,
@@ -100,32 +107,39 @@ fun HomeScreen(
     onDetailsRecording: (RecordingItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val dimens = LocalExpressiveDimens.current
+    val isCompact = LocalCompactMode.current
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
+        contentPadding = PaddingValues(
+            horizontal = dimens.screenPadding,
+            vertical = if (isCompact) 10.dp else 16.dp
+        )
     ) {
-        // Top Welcome Bar with Customizable User Profile & Dark/Light Toggle
+        // Top Welcome Bar with Customizable User Profile, Compact Mode Switcher & Dark/Light Toggle
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 16.dp),
+                    .padding(top = if (isCompact) 4.dp else 8.dp, bottom = if (isCompact) 10.dp else 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // User Profile & Greeting
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(dimens.cornerRadiusMedium))
                         .clickable(onClick = onEditProfileClick)
-                        .padding(4.dp)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                         .testTag("user_profile_header")
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(if (isCompact) 40.dp else 48.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer)
                             .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
@@ -133,43 +147,74 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = config.userAvatarEmoji,
-                            fontSize = 24.sp
+                            fontSize = if (isCompact) 20.sp else 24.sp
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "Hello, ${config.userName}",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontSize = if (isCompact) 17.sp else 20.sp,
+                                fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = "Edit Profile",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(if (isCompact) 13.dp else 15.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(1.dp))
                         Text(
-                            text = "${config.pastelTheme.displayName} • Ready to record",
-                            fontSize = 12.sp,
+                            text = "${config.pastelTheme.displayName} • Ready",
+                            fontSize = if (isCompact) 11.sp else 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
+                // Dedicated Header Quick Actions: Compact Mode & Theme Switcher
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // Dedicated Compact Mode Pill Button
+                    Surface(
+                        onClick = onToggleCompactModeClick,
+                        shape = CircleShape,
+                        color = if (config.isCompactMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = if (config.isCompactMode) 4.dp else 1.dp,
+                        modifier = Modifier
+                            .height(if (isCompact) 34.dp else 38.dp)
+                            .testTag("compact_mode_toggle_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (config.isCompactMode) Icons.Default.FitScreen else Icons.Default.DensityMedium,
+                                contentDescription = "Toggle Compact Mode",
+                                tint = if (config.isCompactMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = if (config.isCompactMode) "Compact" else "Dense",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (config.isCompactMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
                     // Dark / Light quick switcher icon button
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(if (isCompact) 34.dp else 38.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable(onClick = onToggleThemeModeClick)
@@ -184,7 +229,7 @@ fun HomeScreen(
                             },
                             contentDescription = "Toggle Theme Mode",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -204,7 +249,7 @@ fun HomeScreen(
 
         // Quick Config Badges / Status Strip
         item {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(dimens.sectionSpacing))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -212,7 +257,7 @@ fun HomeScreen(
             ) {
                 Text(
                     text = "Recording Setup",
-                    fontSize = 17.sp,
+                    fontSize = if (isCompact) 15.sp else 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -222,19 +267,19 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = "Customize",
-                        fontSize = 13.sp,
+                        fontSize = if (isCompact) 12.sp else 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 10.dp))
             ConfigBadgesRow(config = config, onBadgeClick = onSeeAllQuickSettings)
         }
 
         // Recent Recordings Section
         item {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(dimens.sectionSpacing))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -242,7 +287,7 @@ fun HomeScreen(
             ) {
                 Text(
                     text = "Recent Captures",
-                    fontSize = 17.sp,
+                    fontSize = if (isCompact) 15.sp else 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -253,14 +298,14 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "View All (${recentRecordings.size})",
-                            fontSize = 13.sp,
+                            fontSize = if (isCompact) 12.sp else 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 10.dp))
         }
 
         if (recentRecordings.isEmpty()) {
@@ -277,12 +322,12 @@ fun HomeScreen(
                     onDelete = { onDeleteRecording(item) },
                     onDetails = { onDetailsRecording(item) }
                 )
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(dimens.itemSpacing))
             }
         }
 
         item {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 20.dp else 32.dp))
         }
     }
 }
@@ -297,6 +342,8 @@ private fun HeroRecordingCard(
 ) {
     val isRecording = recordingStatus.isRecording
     val isPaused = recordingStatus.isPaused
+    val isCompact = LocalCompactMode.current
+    val dimens = LocalExpressiveDimens.current
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_transition")
     val pulseScale by infiniteTransition.animateFloat(
@@ -313,20 +360,20 @@ private fun HeroRecordingCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("hero_recording_card"),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(dimens.cornerRadiusLarge),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(if (isCompact) 16.dp else 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Live Status Indicator Pill
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(CircleShape)
                     .background(
                         if (isRecording) {
                             if (isPaused) Color(0xFFFEF3C7) else Color(0xFFFFE4E6)
@@ -334,12 +381,12 @@ private fun HeroRecordingCard(
                             MaterialTheme.colorScheme.primaryContainer
                         }
                     )
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                    .padding(horizontal = if (isCompact) 10.dp else 14.dp, vertical = if (isCompact) 4.dp else 6.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(if (isCompact) 7.dp else 8.dp)
                             .clip(CircleShape)
                             .background(
                                 if (isRecording) {
@@ -356,7 +403,7 @@ private fun HeroRecordingCard(
                         } else {
                             "READY TO CAPTURE"
                         },
-                        fontSize = 11.sp,
+                        fontSize = if (isCompact) 10.sp else 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isRecording) {
                             if (isPaused) Color(0xFFB45309) else ScreeneryRecordRed
@@ -367,47 +414,52 @@ private fun HeroRecordingCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 18.dp))
 
             // Timer or Ready Info
             if (isRecording) {
                 Text(
                     text = recordingStatus.formattedTime,
-                    fontSize = 42.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = if (isCompact) 34.sp else 42.sp,
+                    fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onSurface,
                     letterSpacing = 1.sp,
                     modifier = Modifier.testTag("recording_timer_text")
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${config.resolution.label} • ${config.aspectRatio.label} • ${config.fps.fps} FPS • ${config.audioSource.label}",
-                    fontSize = 13.sp,
+                    fontSize = if (isCompact) 11.5.sp else 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Text(
                     text = "One Tap Screen Record",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = if (isCompact) 18.sp else 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = "Lossless capture with floating controls & auto-gallery sync",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontSize = if (isCompact) 11.5.sp else 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 16.dp else 24.dp))
 
             // Main Action Controls
             if (!isRecording) {
                 // Large Start Recording Button
+                val buttonSize = if (isCompact) 74.dp else 92.dp
+                val innerGlowSize = if (isCompact) 60.dp else 76.dp
+                val dotSize = if (isCompact) 22.dp else 28.dp
+
                 Box(
                     modifier = Modifier
-                        .size(92.dp)
-                        .scale(1f)
+                        .size(buttonSize)
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
@@ -423,25 +475,25 @@ private fun HeroRecordingCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(innerGlowSize)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(dotSize)
                                 .clip(CircleShape)
                                 .background(Color.White)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 12.dp))
                 Text(
                     text = "Tap to Record",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = if (isCompact) 12.sp else 13.sp,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
@@ -454,7 +506,7 @@ private fun HeroRecordingCard(
                     // Pause/Resume Button
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(if (isCompact) 52.dp else 64.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable(onClick = onPauseResumeClick)
@@ -465,16 +517,16 @@ private fun HeroRecordingCard(
                             imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                             contentDescription = if (isPaused) "Resume" else "Pause",
                             tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(if (isCompact) 24.dp else 28.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(32.dp))
+                    Spacer(modifier = Modifier.width(if (isCompact) 20.dp else 32.dp))
 
                     // Stop Button
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(if (isCompact) 60.dp else 72.dp)
                             .scale(pulseScale)
                             .clip(CircleShape)
                             .background(ScreeneryRecordRed)
@@ -486,15 +538,15 @@ private fun HeroRecordingCard(
                             imageVector = Icons.Default.Stop,
                             contentDescription = "Stop",
                             tint = Color.White,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(if (isCompact) 26.dp else 32.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(if (isCompact) 10.dp else 14.dp))
                 Text(
                     text = if (isPaused) "Recording Paused • Tap Resume or use Notification Drawer" else "● Recording Live • Floating bar auto-hidden • Controls in Notification Drawer",
-                    fontSize = 12.sp,
+                    fontSize = if (isCompact) 11.sp else 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
@@ -505,11 +557,13 @@ private fun HeroRecordingCard(
 
 @Composable
 private fun ConfigBadgesRow(config: RecordingConfig, onBadgeClick: () -> Unit) {
+    val isCompact = LocalCompactMode.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onBadgeClick),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(if (isCompact) 4.dp else 6.dp)
     ) {
         BadgeItem(
             modifier = Modifier.weight(1f),
@@ -551,35 +605,41 @@ private fun BadgeItem(
     title: String,
     sub: String
 ) {
+    val isCompact = LocalCompactMode.current
+    val dimens = LocalExpressiveDimens.current
+
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(dimens.cornerRadiusSmall),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 4.dp),
+                .padding(
+                    vertical = if (isCompact) 8.dp else 12.dp,
+                    horizontal = 2.dp
+                ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(if (isCompact) 17.dp else 20.dp)
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 3.dp else 6.dp))
             Text(
                 text = title,
-                fontSize = 13.sp,
+                fontSize = if (isCompact) 11.sp else 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
             Text(
                 text = sub,
-                fontSize = 11.sp,
+                fontSize = if (isCompact) 9.5.sp else 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
@@ -589,42 +649,45 @@ private fun BadgeItem(
 
 @Composable
 private fun EmptyRecordingsCard(onStartRecordingClick: () -> Unit) {
+    val dimens = LocalExpressiveDimens.current
+    val isCompact = LocalCompactMode.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(dimens.cornerRadiusMedium),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(28.dp),
+                .padding(if (isCompact) 18.dp else 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(if (isCompact) 44.dp else 56.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "📹", fontSize = 26.sp)
+                Text(text = "📹", fontSize = if (isCompact) 20.sp else 26.sp)
             }
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 10.dp else 14.dp))
             Text(
                 text = "No recordings yet",
-                fontSize = 16.sp,
+                fontSize = if (isCompact) 14.sp else 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = "Your high-resolution screen recordings will show up here, automatically synced to your Gallery.",
-                fontSize = 13.sp,
+                fontSize = if (isCompact) 11.5.sp else 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 10.dp else 16.dp))
             TextButton(onClick = onStartRecordingClick) {
                 Text("Start First Recording", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
@@ -641,30 +704,35 @@ private fun RecentRecordingItemCard(
     onDelete: () -> Unit,
     onDetails: () -> Unit
 ) {
+    val isCompact = LocalCompactMode.current
+    val dimens = LocalExpressiveDimens.current
     var menuExpanded by remember { mutableStateOf(false) }
     val dateString = SimpleDateFormat("dd MMM, h:mm a", Locale.getDefault()).format(Date(item.dateAdded))
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(dimens.cornerRadiusMedium))
             .clickable(onClick = onPlay)
             .testTag("recent_item_${item.id}"),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(dimens.cornerRadiusMedium),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(if (isCompact) 8.dp else 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Thumbnail
             Box(
                 modifier = Modifier
-                    .size(width = 68.dp, height = 52.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(
+                        width = if (isCompact) 56.dp else 68.dp,
+                        height = if (isCompact) 44.dp else 52.dp
+                    )
+                    .clip(RoundedCornerShape(dimens.cornerRadiusSmall))
                     .background(
                         Brush.linearGradient(
                             listOf(
@@ -679,30 +747,30 @@ private fun RecentRecordingItemCard(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(if (isCompact) 20.dp else 24.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(if (isCompact) 10.dp else 12.dp))
 
             // Information
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.title,
-                    fontSize = 14.sp,
+                    fontSize = if (isCompact) 13.sp else 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(1.dp))
                 Text(
                     text = "${item.formattedDuration} • ${item.formattedSize} • ${item.resolutionString}",
-                    fontSize = 12.sp,
+                    fontSize = if (isCompact) 11.sp else 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = dateString,
-                    fontSize = 11.sp,
+                    fontSize = if (isCompact) 10.sp else 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
@@ -712,7 +780,8 @@ private fun RecentRecordingItemCard(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(if (isCompact) 20.dp else 24.dp)
                     )
                 }
 

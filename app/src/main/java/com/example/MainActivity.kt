@@ -158,7 +158,8 @@ class MainActivity : ComponentActivity() {
 
             MyApplicationTheme(
                 themeMode = currentConfig.themeMode,
-                pastelTheme = currentConfig.pastelTheme
+                pastelTheme = currentConfig.pastelTheme,
+                isCompactMode = currentConfig.isCompactMode
             ) {
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -216,6 +217,14 @@ class MainActivity : ComponentActivity() {
                                             AppThemeMode.DARK -> AppThemeMode.SYSTEM
                                         }
                                         viewModel.updateThemeMode(nextMode)
+                                    },
+                                    onToggleCompactModeClick = {
+                                        val newCompact = !currentConfig.isCompactMode
+                                        viewModel.toggleCompactMode(newCompact)
+                                        scope.launch {
+                                            val modeText = if (newCompact) "Compact Mode: Tight screen fit enabled" else "Spacious Mode: Expressive layout enabled"
+                                            snackbarHostState.showSnackbar(modeText)
+                                        }
                                     },
                                     onSeeAllQuickSettings = { navController.navigate("settings") },
                                     onSeeAllRecordings = { navController.navigate("recordings") },

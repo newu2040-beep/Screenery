@@ -63,6 +63,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.RecordingItem
+import com.example.ui.theme.LocalCompactMode
+import com.example.ui.theme.LocalExpressiveDimens
 import com.example.ui.theme.ScreeneryRecordRed
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -113,6 +115,9 @@ fun RecordingsScreen(
         }
     }
 
+    val dimens = LocalExpressiveDimens.current
+    val isCompact = LocalCompactMode.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -123,7 +128,7 @@ fun RecordingsScreen(
                 Text(
                     text = "Recordings (${recordings.size})",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
+                    fontSize = if (isCompact) 16.sp else 18.sp,
                     color = MaterialTheme.colorScheme.onBackground
                 )
             },
@@ -153,7 +158,7 @@ fun RecordingsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
+                    .padding(horizontal = dimens.screenPadding, vertical = 4.dp)
             ) {
                 OutlinedTextField(
                     value = searchQuery,
@@ -193,8 +198,8 @@ fun RecordingsScreen(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = dimens.screenPadding, vertical = if (isCompact) 4.dp else 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 8.dp)
         ) {
             items(RecordingFilter.entries) { filter ->
                 val selected = selectedFilter == filter
@@ -204,7 +209,7 @@ fun RecordingsScreen(
                     label = {
                         Text(
                             text = filter.label,
-                            fontSize = 12.sp,
+                            fontSize = if (isCompact) 11.sp else 12.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                         )
                     },
@@ -214,7 +219,7 @@ fun RecordingsScreen(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
                     border = null,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(dimens.cornerRadiusSmall)
                 )
             }
         }
@@ -264,8 +269,8 @@ fun RecordingsScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = dimens.screenPadding),
+                verticalArrangement = Arrangement.spacedBy(dimens.itemSpacing),
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
                 items(filteredList, key = { it.id }) { item ->
@@ -294,20 +299,22 @@ fun RecordingCardItem(
     onDelete: () -> Unit,
     onDetails: () -> Unit
 ) {
+    val dimens = LocalExpressiveDimens.current
+    val isCompact = LocalCompactMode.current
     var menuExpanded by remember { mutableStateOf(false) }
     val dateString = SimpleDateFormat("dd MMM, h:mm a", Locale.getDefault()).format(Date(item.dateAdded))
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(dimens.cornerRadiusMedium))
             .clickable(onClick = onPlay)
             .testTag("recording_card_${item.id}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(dimens.cornerRadiusMedium),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(if (isCompact) 10.dp else 14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -315,8 +322,11 @@ fun RecordingCardItem(
                 // Thumbnail Box
                 Box(
                     modifier = Modifier
-                        .size(width = 80.dp, height = 62.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .size(
+                            width = if (isCompact) 64.dp else 80.dp,
+                            height = if (isCompact) 50.dp else 62.dp
+                        )
+                        .clip(RoundedCornerShape(dimens.cornerRadiusSmall))
                         .background(
                             Brush.linearGradient(
                                 listOf(

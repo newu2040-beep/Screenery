@@ -124,6 +124,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.updateConfig(currentConfig.value.copy(autoSaveToGallery = enabled))
     }
 
+    fun toggleCompactMode(enabled: Boolean) {
+        repository.updateConfig(currentConfig.value.copy(isCompactMode = enabled))
+    }
+
     fun updateThemeMode(mode: AppThemeMode) {
         repository.updateConfig(currentConfig.value.copy(themeMode = mode))
     }

@@ -208,6 +208,7 @@ data class RecordingConfig(
     val autoStopMinutes: Int = 0, // 0 is disabled
     val hideStatusBar: Boolean = false,
     val autoSaveToGallery: Boolean = true,
+    val isCompactMode: Boolean = false, // Compact UI mode for tighter sizing and smaller displays
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val pastelTheme: PastelTheme = PastelTheme.LAVENDER,
     val userName: String = "Creator",
