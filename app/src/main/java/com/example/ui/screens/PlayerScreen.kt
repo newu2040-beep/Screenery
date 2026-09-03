@@ -44,6 +44,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -75,14 +76,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.data.model.RecordingItem
-import com.example.ui.theme.ScreeneryBg
-import com.example.ui.theme.ScreeneryPrimary
 import com.example.ui.theme.ScreeneryRecordRed
-import com.example.ui.theme.ScreenerySurface
-import com.example.ui.theme.ScreenerySurfaceVariant
-import com.example.ui.theme.ScreeneryTextPrimary
-import com.example.ui.theme.ScreeneryTextSecondary
-import com.example.ui.theme.ScreeneryTextTertiary
 import kotlinx.coroutines.delay
 import java.io.File
 import java.text.SimpleDateFormat
@@ -146,7 +140,7 @@ fun PlayerScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(ScreeneryBg)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         TopAppBar(
             title = {
@@ -154,7 +148,7 @@ fun PlayerScreen(
                     text = item.title,
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
-                    color = ScreeneryTextPrimary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1
                 )
             },
@@ -163,7 +157,7 @@ fun PlayerScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = ScreeneryTextPrimary
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
             },
@@ -172,7 +166,7 @@ fun PlayerScreen(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Options",
-                        tint = ScreeneryTextPrimary
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 DropdownMenu(
@@ -202,7 +196,7 @@ fun PlayerScreen(
                     )
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = ScreeneryBg)
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
         )
 
         LazyColumn(
@@ -234,7 +228,6 @@ fun PlayerScreen(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            // Cinematic simulation / placeholder view
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -304,8 +297,8 @@ fun PlayerScreen(
                                     },
                                     valueRange = 0f..totalDurationMs.toFloat().coerceAtLeast(1f),
                                     colors = SliderDefaults.colors(
-                                        thumbColor = ScreeneryPrimary,
-                                        activeTrackColor = ScreeneryPrimary,
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
                                         inactiveTrackColor = Color.White.copy(alpha = 0.3f)
                                     ),
                                     modifier = Modifier.fillMaxWidth()
@@ -398,12 +391,12 @@ fun PlayerScreen(
                 }
             }
 
-            // Video Info Card (matching Screen 4 of mockup)
+            // Video Info Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = ScreenerySurface)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(
                         modifier = Modifier.padding(18.dp),
@@ -413,7 +406,7 @@ fun PlayerScreen(
                             text = "Video Information",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ScreeneryTextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Spacer(modifier = Modifier.height(2.dp))
@@ -452,7 +445,7 @@ fun PlayerScreen(
                         .height(54.dp)
                         .testTag("edit_recording_button"),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ScreeneryPrimary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCut,
@@ -461,7 +454,7 @@ fun PlayerScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Edit Recording",
+                        text = "Edit Recording (Trim)",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -487,7 +480,7 @@ private fun PlayerActionButton(
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = ScreenerySurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -499,7 +492,7 @@ private fun PlayerActionButton(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (label == "Delete") ScreeneryRecordRed else ScreeneryPrimary,
+                tint = if (label == "Delete") ScreeneryRecordRed else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -507,7 +500,7 @@ private fun PlayerActionButton(
                 text = label,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (label == "Delete") ScreeneryRecordRed else ScreeneryTextPrimary
+                color = if (label == "Delete") ScreeneryRecordRed else MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -523,14 +516,14 @@ private fun InfoCol(
         Text(
             text = label,
             fontSize = 11.sp,
-            color = ScreeneryTextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(1.dp))
         Text(
             text = value,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
-            color = ScreeneryTextPrimary
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

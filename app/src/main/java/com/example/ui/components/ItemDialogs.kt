@@ -4,6 +4,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -17,10 +18,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.ScreeneryPrimary
 import com.example.ui.theme.ScreeneryRecordRed
-import com.example.ui.theme.ScreeneryTextPrimary
-import com.example.ui.theme.ScreeneryTextSecondary
 
 @Composable
 fun RenameDialog(
@@ -37,7 +35,7 @@ fun RenameDialog(
                 text = "Rename Recording",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = ScreeneryTextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
@@ -58,7 +56,7 @@ fun RenameDialog(
                     }
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = ScreeneryPrimary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.testTag("confirm_rename_button")
             ) {
                 Text("Save")
@@ -66,10 +64,11 @@ fun RenameDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = ScreeneryTextSecondary)
+                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         shape = RoundedCornerShape(20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
         modifier = Modifier.testTag("rename_dialog")
     )
 }
@@ -87,14 +86,14 @@ fun DeleteConfirmationDialog(
                 text = "Delete Recording?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = ScreeneryTextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
             Text(
                 text = "Are you sure you want to delete \"$itemTitle\"? This file will be permanently removed from your device.",
                 fontSize = 14.sp,
-                color = ScreeneryTextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         confirmButton = {
@@ -109,10 +108,11 @@ fun DeleteConfirmationDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = ScreeneryTextSecondary)
+                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         shape = RoundedCornerShape(20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
         modifier = Modifier.testTag("delete_dialog")
     )
 }

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,13 +16,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -32,13 +37,17 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,18 +63,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.RecordingItem
-import com.example.ui.theme.ScreeneryBg
-import com.example.ui.theme.ScreeneryPrimary
 import com.example.ui.theme.ScreeneryRecordRed
-import com.example.ui.theme.ScreenerySurface
-import com.example.ui.theme.ScreenerySurfaceVariant
-import com.example.ui.theme.ScreeneryTextPrimary
-import com.example.ui.theme.ScreeneryTextSecondary
-import com.example.ui.theme.ScreeneryTextTertiary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+enum class RecordingFilter(val label: String) {
+    ALL("All Videos"),
+    TODAY("Today"),
+    TRIMMED("Trimmed / Edited"),
+    HIGH_RES("HD & 4K")
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordingsScreen(
     recordings: List<RecordingItem>,
@@ -75,110 +85,133 @@ fun RecordingsScreen(
     onShare: (RecordingItem) -> Unit,
     onDelete: (RecordingItem) -> Unit,
     onDetails: (RecordingItem) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("All") }
+    var selectedFilter by remember { mutableStateOf(RecordingFilter.ALL) }
+    var isSearchExpanded by remember { mutableStateOf(false) }
 
-    val filteredList = recordings.filter { item ->
-        val matchesSearch = item.title.contains(searchQuery, ignoreCase = true)
-        val matchesFilter = when (selectedFilter) {
-            "4K" -> item.width >= 3840 || item.height >= 3840
-            "1080p" -> item.width == 1920 || item.height == 1920
-            "60+ FPS" -> item.fps >= 60
-            else -> true
+    val filteredList = remember(recordings, searchQuery, selectedFilter) {
+        recordings.filter { item ->
+            val matchesQuery = if (searchQuery.isBlank()) true else {
+                item.title.contains(searchQuery, ignoreCase = true) ||
+                        item.codec.contains(searchQuery, ignoreCase = true)
+            }
+
+            val matchesFilter = when (selectedFilter) {
+                RecordingFilter.ALL -> true
+                RecordingFilter.TODAY -> {
+                    val oneDayAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+                    item.dateAdded >= oneDayAgo
+                }
+                RecordingFilter.TRIMMED -> item.title.contains("trimmed", ignoreCase = true)
+                RecordingFilter.HIGH_RES -> item.width >= 1920 || item.height >= 1080
+            }
+
+            matchesQuery && matchesFilter
         }
-        matchesSearch && matchesFilter
     }
-
-    val totalSizeMb = recordings.sumOf { it.sizeBytes } / (1024 * 1024.0)
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(ScreeneryBg)
-            .padding(horizontal = 20.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Screen Title & Summary Stats
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
+        TopAppBar(
+            title = {
                 Text(
-                    text = "Recordings",
-                    fontSize = 24.sp,
+                    text = "Recordings (${recordings.size})",
                     fontWeight = FontWeight.Bold,
-                    color = ScreeneryTextPrimary
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-                Text(
-                    text = "${recordings.size} videos • ${if (totalSizeMb >= 1024) "%.1f GB".format(totalSizeMb / 1024.0) else "%.1f MB".format(totalSizeMb)} used",
-                    fontSize = 13.sp,
-                    color = ScreeneryTextSecondary
-                )
-            }
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            },
+            actions = {
+                IconButton(onClick = { isSearchExpanded = !isSearchExpanded }) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+        )
 
+        // Collapsible Search Bar
+        AnimatedVisibility(visible = isSearchExpanded) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(ScreeneryPrimary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.VideoLibrary,
-                    contentDescription = null,
-                    tint = ScreeneryPrimary
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by title...") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("recordings_search_input")
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Search Bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Search recordings...", fontSize = 14.sp) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = ScreeneryTextSecondary
-                )
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = ScreenerySurface,
-                unfocusedContainerColor = ScreenerySurface,
-                focusedBorderColor = ScreeneryPrimary,
-                unfocusedBorderColor = Color(0xFFE5E7EB)
-            ),
+        // Horizontal Filter Chips
+        LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("recordings_search_bar")
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Filter chips
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+                .padding(horizontal = 20.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf("All", "4K", "1080p", "60+ FPS").forEach { filter ->
+            items(RecordingFilter.entries) { filter ->
+                val selected = selectedFilter == filter
                 FilterChip(
-                    selected = selectedFilter == filter,
+                    selected = selected,
                     onClick = { selectedFilter = filter },
-                    label = { Text(filter, fontSize = 12.sp) },
+                    label = {
+                        Text(
+                            text = filter.label,
+                            fontSize = 12.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = ScreeneryPrimary,
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = Color.White,
-                        containerColor = ScreenerySurface
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
                     border = null,
                     shape = RoundedCornerShape(12.dp)
@@ -186,7 +219,7 @@ fun RecordingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // List of recordings
         if (filteredList.isEmpty()) {
@@ -201,13 +234,13 @@ fun RecordingsScreen(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .background(ScreenerySurfaceVariant),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.VideoLibrary,
                             contentDescription = null,
-                            tint = ScreeneryTextSecondary,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(36.dp)
                         )
                     }
@@ -216,13 +249,13 @@ fun RecordingsScreen(
                         text = if (searchQuery.isNotEmpty()) "No matching recordings found" else "No recordings yet",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ScreeneryTextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Recorded videos will appear here ready to play and edit",
                         fontSize = 13.sp,
-                        color = ScreeneryTextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -230,7 +263,8 @@ fun RecordingsScreen(
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
@@ -270,7 +304,7 @@ fun RecordingCardItem(
             .clickable(onClick = onPlay)
             .testTag("recording_card_${item.id}"),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = ScreenerySurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -285,7 +319,10 @@ fun RecordingCardItem(
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             Brush.linearGradient(
-                                listOf(Color(0xFF3730A3), Color(0xFF6B21A8))
+                                listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary
+                                )
                             )
                         ),
                     contentAlignment = Alignment.Center
@@ -331,21 +368,21 @@ fun RecordingCardItem(
                         text = item.title,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ScreeneryTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${item.specsSummary} • ${item.formattedSize}",
                         fontSize = 12.sp,
-                        color = ScreeneryTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = dateString,
                         fontSize = 11.sp,
-                        color = ScreeneryTextTertiary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
 
@@ -355,7 +392,7 @@ fun RecordingCardItem(
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Actions",
-                            tint = ScreeneryTextSecondary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -461,7 +498,7 @@ private fun QuickActionPill(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(ScreenerySurfaceVariant)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center
@@ -470,7 +507,7 @@ private fun QuickActionPill(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = ScreeneryPrimary,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(15.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -478,7 +515,7 @@ private fun QuickActionPill(
                 text = title,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = ScreeneryTextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

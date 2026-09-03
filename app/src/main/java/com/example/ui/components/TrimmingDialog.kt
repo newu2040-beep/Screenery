@@ -19,7 +19,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,7 +32,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -45,11 +43,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.RecordingItem
-import com.example.ui.theme.ScreeneryPrimary
-import com.example.ui.theme.ScreenerySecondary
-import com.example.ui.theme.ScreenerySurfaceVariant
-import com.example.ui.theme.ScreeneryTextPrimary
-import com.example.ui.theme.ScreeneryTextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,13 +82,13 @@ fun TrimmingDialog(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(ScreeneryPrimary.copy(alpha = 0.12f)),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCut,
                             contentDescription = "Trim Video",
-                            tint = ScreeneryPrimary
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                     Spacer(modifier = Modifier.size(12.dp))
@@ -104,12 +97,12 @@ fun TrimmingDialog(
                             text = "Trim Recording",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ScreeneryTextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Lossless fast trim (No re-encode)",
+                            text = "Lossless fast trim (Auto-saved to Gallery)",
                             fontSize = 13.sp,
-                            color = ScreeneryTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -120,7 +113,7 @@ fun TrimmingDialog(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = ScreeneryTextSecondary
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -130,7 +123,7 @@ fun TrimmingDialog(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = ScreenerySurfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(
                     modifier = Modifier.padding(18.dp)
@@ -143,13 +136,13 @@ fun TrimmingDialog(
                             Text(
                                 text = "Start Time",
                                 fontSize = 12.sp,
-                                color = ScreeneryTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = formatMs(startVal.toLong()),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ScreeneryPrimary
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
@@ -157,13 +150,13 @@ fun TrimmingDialog(
                             Text(
                                 text = "Trimmed Length",
                                 fontSize = 12.sp,
-                                color = ScreeneryTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = formatMs((endVal - startVal).toLong()),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ScreeneryTextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -171,13 +164,13 @@ fun TrimmingDialog(
                             Text(
                                 text = "End Time",
                                 fontSize = 12.sp,
-                                color = ScreeneryTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = formatMs(endVal.toLong()),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ScreenerySecondary
+                                color = MaterialTheme.colorScheme.secondary
                             )
                         }
                     }
@@ -189,8 +182,7 @@ fun TrimmingDialog(
                         onValueChange = { range ->
                             val start = range.start
                             val end = range.endInclusive
-                            // Minimum 1 second duration
-                            if (end - start >= 1000f) {
+                            if (end - start >= 500f) {
                                 startVal = start
                                 endVal = end
                             }
@@ -198,9 +190,9 @@ fun TrimmingDialog(
                         valueRange = 0f..maxDuration,
                         enabled = !isTrimming,
                         colors = SliderDefaults.colors(
-                            thumbColor = ScreeneryPrimary,
-                            activeTrackColor = ScreeneryPrimary,
-                            inactiveTrackColor = Color(0xFFD1D5DB)
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.outline
                         ),
                         modifier = Modifier.testTag("trim_range_slider")
                     )
@@ -209,8 +201,8 @@ fun TrimmingDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "00:00", fontSize = 11.sp, color = ScreeneryTextSecondary)
-                        Text(text = formatMs(maxDuration.toLong()), fontSize = 11.sp, color = ScreeneryTextSecondary)
+                        Text(text = "00:00", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = formatMs(maxDuration.toLong()), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -228,13 +220,13 @@ fun TrimmingDialog(
                             .fillMaxWidth()
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp)),
-                        color = ScreeneryPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Trimming video... ${(trimProgress * 100).toInt()}%",
+                        text = "Trimming & saving to gallery... ${(trimProgress * 100).toInt()}%",
                         fontSize = 13.sp,
-                        color = ScreeneryTextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
@@ -247,7 +239,7 @@ fun TrimmingDialog(
                         .height(52.dp)
                         .testTag("export_trimmed_button"),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ScreeneryPrimary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCut,

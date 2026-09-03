@@ -40,6 +40,9 @@ data class RecordingItem(
             }
         }
 
+    val resolutionString: String
+        get() = "${width}x${height}"
+
     val specsSummary: String
         get() = "${width}x${height} • ${fps}FPS • ${bitrateMbps}Mbps"
 }

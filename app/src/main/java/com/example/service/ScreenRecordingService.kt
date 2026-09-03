@@ -54,7 +54,14 @@ data class RecordingStatus(
     val currentFilePath: String? = null,
     val lastSavedRecordingId: Long? = null,
     val error: String? = null
-)
+) {
+    val formattedTime: String
+        get() {
+            val min = elapsedSeconds / 60
+            val sec = elapsedSeconds % 60
+            return "%02d:%02d".format(min, sec)
+        }
+}
 
 class ScreenRecordingService : Service() {
 
@@ -189,7 +196,12 @@ class ScreenRecordingService : Service() {
             val screenHeight = displayMetrics.heightPixels
             val screenDensity = displayMetrics.densityDpi
 
-            val dims = currentConfig.resolution.getActualDimensions(screenWidth, screenHeight)
+            val dims = currentConfig.aspectRatio.calculateDimensions(
+                screenWidth = screenWidth,
+                screenHeight = screenHeight,
+                resolution = currentConfig.resolution,
+                orientation = currentConfig.orientation
+            )
             // Dimensions must be even integers for video encoders
             recordingWidth = (dims.first / 2) * 2
             recordingHeight = (dims.second / 2) * 2
@@ -208,18 +220,46 @@ class ScreenRecordingService : Service() {
                 MediaRecorder()
             }
 
-            mediaRecorder?.apply {
-                val hasMicPermission = ContextCompat.checkSelfPermission(
-                    this@ScreenRecordingService,
-                    Manifest.permission.RECORD_AUDIO
-                ) == PackageManager.PERMISSION_GRANTED
-                val hasAudio = currentConfig.audioSource != AudioSourceOption.NONE && hasMicPermission
+            val hasMicPermission = ContextCompat.checkSelfPermission(
+                this@ScreenRecordingService,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+            val shouldRecordAudio = currentConfig.audioSource != AudioSourceOption.NONE && hasMicPermission
 
-                if (hasAudio) {
+            var audioConfigured = false
+
+            mediaRecorder?.apply {
+                if (shouldRecordAudio) {
                     try {
-                        setAudioSource(MediaRecorder.AudioSource.MIC)
+                        val audioSource = when (currentConfig.audioSource) {
+                            AudioSourceOption.SYSTEM -> {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                    MediaRecorder.AudioSource.VOICE_RECOGNITION
+                                } else {
+                                    MediaRecorder.AudioSource.MIC
+                                }
+                            }
+                            AudioSourceOption.BOTH -> {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                    MediaRecorder.AudioSource.VOICE_COMMUNICATION
+                                } else {
+                                    MediaRecorder.AudioSource.MIC
+                                }
+                            }
+                            AudioSourceOption.MICROPHONE -> MediaRecorder.AudioSource.MIC
+                            AudioSourceOption.NONE -> MediaRecorder.AudioSource.MIC
+                        }
+                        setAudioSource(audioSource)
+                        audioConfigured = true
                     } catch (e: Exception) {
-                        Log.w(TAG, "Could not set audio source MIC", e)
+                        Log.w(TAG, "Preferred audio source failed, trying MIC fallback", e)
+                        try {
+                            setAudioSource(MediaRecorder.AudioSource.MIC)
+                            audioConfigured = true
+                        } catch (e2: Exception) {
+                            Log.e(TAG, "All audio sources failed. Continuing with video only.", e2)
+                            audioConfigured = false
+                        }
                     }
                 }
 
@@ -230,12 +270,19 @@ class ScreenRecordingService : Service() {
                 // Dimensions & Bitrate
                 setVideoSize(recordingWidth, recordingHeight)
                 setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-                if (hasAudio) {
+
+                if (audioConfigured) {
                     try {
                         setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                        setAudioEncodingBitRate(128000)
-                        setAudioSamplingRate(44100)
-                    } catch (_: Exception) {}
+                        setAudioEncodingBitRate(currentConfig.audioBitrateKbps * 1000)
+                        setAudioSamplingRate(currentConfig.audioSampleRate)
+                        setAudioChannels(2)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed setting advanced audio encoder settings, falling back to standard AAC", e)
+                        try {
+                            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                        } catch (_: Exception) {}
+                    }
                 }
 
                 setVideoEncodingBitRate(currentConfig.bitrateMbps * 1000 * 1000)
@@ -453,8 +500,9 @@ class ScreenRecordingService : Service() {
                 "Screenery Recording Service",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows screen recording controls and elapsed time"
+                description = "Screen recording controls: Pause, Resume, Stop, and elapsed time counter"
                 setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
@@ -465,60 +513,73 @@ class ScreenRecordingService : Service() {
         val minutes = elapsedSeconds / 60
         val seconds = elapsedSeconds % 60
         val timeString = "%02d:%02d".format(minutes, seconds)
+        val isPaused = _recordingStatus.value.isPaused
 
         val openAppIntent = PendingIntent.getActivity(
             this,
-            0,
+            100,
             Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             },
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val pauseResumeAction = if (_recordingStatus.value.isPaused) {
+        val pauseResumeAction = if (isPaused) {
             val resumeIntent = PendingIntent.getService(
                 this,
-                1,
+                101,
                 Intent(this, ScreenRecordingService::class.java).apply { action = ACTION_RESUME },
-                PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             NotificationCompat.Action.Builder(
                 android.R.drawable.ic_media_play,
-                "Resume",
+                "▶ Resume",
                 resumeIntent
             ).build()
         } else {
             val pauseIntent = PendingIntent.getService(
                 this,
-                2,
+                102,
                 Intent(this, ScreenRecordingService::class.java).apply { action = ACTION_PAUSE },
-                PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             NotificationCompat.Action.Builder(
                 android.R.drawable.ic_media_pause,
-                "Pause",
+                "⏸ Pause",
                 pauseIntent
             ).build()
         }
 
         val stopIntent = PendingIntent.getService(
             this,
-            3,
+            103,
             Intent(this, ScreenRecordingService::class.java).apply { action = ACTION_STOP },
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val stopAction = NotificationCompat.Action.Builder(
             android.R.drawable.ic_menu_close_clear_cancel,
-            "Stop",
+            "⏹ Stop & Save",
             stopIntent
         ).build()
 
+        val title = if (isPaused) "⏸ Paused ($timeString)" else "🔴 Recording ($timeString)"
+        val content = if (isPaused) {
+            "Paused at $timeString • Tap Resume to continue"
+        } else {
+            "${currentConfig.resolution.label} • ${currentConfig.fps.fps} FPS • ${currentConfig.audioSource.label}"
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Screenery Recording")
-            .setContentText(if (_recordingStatus.value.isPaused) "Paused • $timeString" else "● Recording • $timeString")
+            .setContentTitle(title)
+            .setContentText(content)
+            .setSubText("Screenery")
             .setSmallIcon(R.drawable.ic_notification_record)
             .setContentIntent(openAppIntent)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .addAction(pauseResumeAction)
             .addAction(stopAction)
             .setPriority(NotificationCompat.PRIORITY_LOW)

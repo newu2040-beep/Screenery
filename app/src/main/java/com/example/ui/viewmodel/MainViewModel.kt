@@ -7,14 +7,18 @@ import android.os.Environment
 import android.os.StatFs
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.model.AppThemeMode
 import com.example.data.model.AudioSourceOption
 import com.example.data.model.DeviceCapability
+import com.example.data.model.PastelTheme
 import com.example.data.model.RecordingConfig
 import com.example.data.model.RecordingItem
+import com.example.data.model.VideoAspectRatio
 import com.example.data.model.VideoFps
 import com.example.data.model.VideoOrientation
 import com.example.data.model.VideoResolution
 import com.example.data.repository.RecordingRepository
+import com.example.engine.GalleryHelper
 import com.example.engine.VideoTrimmer
 import com.example.service.ScreenRecordingService
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +67,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.updateConfig(currentConfig.value.copy(resolution = resolution))
     }
 
+    fun updateAspectRatio(aspectRatio: VideoAspectRatio) {
+        repository.updateConfig(currentConfig.value.copy(aspectRatio = aspectRatio))
+    }
+
     fun updateFps(fps: VideoFps) {
         repository.updateConfig(currentConfig.value.copy(fps = fps))
     }
@@ -73,6 +81,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateAudioSource(audioSource: AudioSourceOption) {
         repository.updateConfig(currentConfig.value.copy(audioSource = audioSource))
+    }
+
+    fun updateAudioQuality(sampleRate: Int, bitrateKbps: Int) {
+        repository.updateConfig(
+            currentConfig.value.copy(
+                audioSampleRate = sampleRate,
+                audioBitrateKbps = bitrateKbps
+            )
+        )
     }
 
     fun updateOrientation(orientation: VideoOrientation) {
@@ -91,12 +108,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.updateConfig(currentConfig.value.copy(floatingControls = enabled))
     }
 
+    fun toggleAutoHideFloatingBar(enabled: Boolean) {
+        repository.updateConfig(currentConfig.value.copy(autoHideFloatingBar = enabled))
+    }
+
     fun updateAutoStop(minutes: Int) {
         repository.updateConfig(currentConfig.value.copy(autoStopMinutes = minutes))
     }
 
     fun toggleHideStatusBar(enabled: Boolean) {
         repository.updateConfig(currentConfig.value.copy(hideStatusBar = enabled))
+    }
+
+    fun toggleAutoSaveToGallery(enabled: Boolean) {
+        repository.updateConfig(currentConfig.value.copy(autoSaveToGallery = enabled))
+    }
+
+    fun updateThemeMode(mode: AppThemeMode) {
+        repository.updateConfig(currentConfig.value.copy(themeMode = mode))
+    }
+
+    fun updatePastelTheme(pastelTheme: PastelTheme) {
+        repository.updateConfig(currentConfig.value.copy(pastelTheme = pastelTheme))
+    }
+
+    fun updateUserProfile(name: String, avatar: String) {
+        repository.updateConfig(currentConfig.value.copy(userName = name, userAvatarEmoji = avatar))
     }
 
     fun pauseRecording() {
@@ -121,7 +158,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun validateBeforeRecording(): ValidationResult {
-        // Storage check: Require at least 150MB free
         try {
             val context = getApplication<Application>()
             val moviesDir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
@@ -132,7 +168,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         } catch (_: Exception) {}
 
-        // Validate encoder capability
         val cfg = currentConfig.value
         val caps = deviceCapability.value
         if (cfg.resolution == VideoResolution.RES_4K && !caps.is4kSupported) {
@@ -186,7 +221,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _isTrimming.value = false
 
             if (success && dstFile.exists() && dstFile.length() > 0) {
-                val newDurationMs = endMs - startMs
+                val newDurationMs = (endMs - startMs).coerceAtLeast(1000L)
+                val newTitle = "${item.title}_Trimmed"
+
+                // Save to gallery if auto-save is enabled
+                if (currentConfig.value.autoSaveToGallery) {
+                    try {
+                        GalleryHelper.saveVideoToGallery(context, dstFile, newTitle)
+                    } catch (_: Exception) {}
+                }
+
                 val newItem = repository.saveCompletedRecording(
                     filePath = dstFile.absolutePath,
                     durationMs = newDurationMs,
@@ -196,7 +240,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     bitrateMbps = item.bitrateMbps,
                     codec = item.codec,
                     audioSource = item.audioSource,
-                    customTitle = "${item.title}_Trimmed"
+                    customTitle = newTitle
                 )
                 onFinished(true, newItem)
             } else {

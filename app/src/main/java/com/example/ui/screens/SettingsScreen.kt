@@ -18,17 +18,33 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.StayCurrentLandscape
 import androidx.compose.material.icons.filled.StayCurrentPortrait
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,23 +76,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.AppThemeMode
 import com.example.data.model.AudioSourceOption
 import com.example.data.model.DeviceCapability
+import com.example.data.model.PastelTheme
 import com.example.data.model.RecordingConfig
+import com.example.data.model.VideoAspectRatio
 import com.example.data.model.VideoFps
 import com.example.data.model.VideoOrientation
 import com.example.data.model.VideoResolution
-import com.example.ui.theme.ScreeneryBg
-import com.example.ui.theme.ScreeneryPillActiveBg
-import com.example.ui.theme.ScreeneryPillActiveBorder
-import com.example.ui.theme.ScreeneryPillInactive
-import com.example.ui.theme.ScreeneryPrimary
-import com.example.ui.theme.ScreenerySecondary
-import com.example.ui.theme.ScreenerySurface
-import com.example.ui.theme.ScreenerySurfaceVariant
-import com.example.ui.theme.ScreeneryTextPrimary
-import com.example.ui.theme.ScreeneryTextSecondary
-import com.example.ui.theme.ScreeneryTextTertiary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,25 +92,25 @@ fun SettingsScreen(
     currentConfig: RecordingConfig,
     deviceCapability: DeviceCapability,
     onConfigChanged: (RecordingConfig) -> Unit,
+    onEditProfileClick: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var localConfig by remember(currentConfig) { mutableStateOf(currentConfig) }
-    var showSavedMessage by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(ScreeneryBg)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         TopAppBar(
             title = {
                 Text(
-                    text = "Recording Settings",
+                    text = "Preferences & Settings",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = ScreeneryTextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             },
             navigationIcon = {
@@ -110,11 +118,11 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = ScreeneryTextPrimary
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = ScreeneryBg)
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
         )
 
         LazyColumn(
@@ -124,6 +132,247 @@ fun SettingsScreen(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
+            // Profile Setup Card
+            item {
+                SectionHeader(title = "Profile & Identity")
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable(onClick = onEditProfileClick)
+                        .testTag("settings_profile_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = localConfig.userAvatarEmoji, fontSize = 28.sp)
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = localConfig.userName,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Tap to customize name and avatar",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            // Appearance & Themes (Dark/Light + Pastel Themes)
+            item {
+                SectionHeader(title = "Theme & Appearance")
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Dark / Light / System Mode Pill Selector
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        Triple(AppThemeMode.SYSTEM, "System", Icons.Default.Palette),
+                        Triple(AppThemeMode.LIGHT, "Light", Icons.Default.LightMode),
+                        Triple(AppThemeMode.DARK, "Dark", Icons.Default.DarkMode)
+                    ).forEach { (mode, label, icon) ->
+                        val isSelected = localConfig.themeMode == mode
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable {
+                                    val updated = localConfig.copy(themeMode = mode)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                                .testTag("theme_mode_${mode.name}"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = label,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = label,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = "Pastel Color Themes",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Pastel Theme Horizontal Selector
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(PastelTheme.entries) { theme ->
+                        val isSelected = localConfig.pastelTheme == theme
+                        Card(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    val updated = localConfig.copy(pastelTheme = theme)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                                .testTag("pastel_theme_${theme.name}"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) Color(theme.lightContainerColor)
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                2.dp,
+                                if (isSelected) Color(theme.primaryColor)
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(theme.primaryColor))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = theme.displayName,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color(theme.primaryColor) else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Auto-Save To Phone Gallery Option
+            item {
+                SectionHeader(title = "Gallery & MediaStore Sync")
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhotoLibrary,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Auto-Save to Phone Gallery",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Automatically index finished & trimmed videos in Photos / Movies album",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = localConfig.autoSaveToGallery,
+                                onCheckedChange = { checked ->
+                                    val updated = localConfig.copy(autoSaveToGallery = checked)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                                ),
+                                modifier = Modifier.testTag("auto_save_gallery_switch")
+                            )
+                        }
+                    }
+                }
+            }
+
             // Resolution Selection
             item {
                 SectionHeader(title = "Resolution")
@@ -148,25 +397,16 @@ fun SettingsScreen(
                             selected = isSelected,
                             enabled = isSupported,
                             onClick = {
-                                if (isSupported) {
-                                    localConfig = localConfig.copy(resolution = res)
-                                    onConfigChanged(localConfig)
-                                }
+                                val updated = localConfig.copy(resolution = res)
+                                localConfig = updated
+                                onConfigChanged(updated)
                             }
                         )
                     }
                 }
-                if (!deviceCapability.is4kSupported) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "• 4K resolution is locked because this device's hardware encoder does not support 4K.",
-                        fontSize = 11.sp,
-                        color = ScreeneryTextSecondary
-                    )
-                }
             }
 
-            // Frame Rate (FPS) Selection
+            // Frame Rate (FPS)
             item {
                 SectionHeader(title = "Frame Rate (FPS)")
                 Spacer(modifier = Modifier.height(10.dp))
@@ -174,89 +414,314 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val fpsList = listOf(
-                        VideoFps.FPS_24,
+                    listOf(
                         VideoFps.FPS_30,
                         VideoFps.FPS_60,
+                        VideoFps.FPS_90,
                         VideoFps.FPS_120
-                    )
-                    fpsList.forEach { fps ->
+                    ).forEach { fps ->
                         val isSupported = deviceCapability.supportedFpsList.contains(fps)
                         val isSelected = localConfig.fps == fps
                         PillSelector(
                             modifier = Modifier.weight(1f),
-                            title = "${fps.fps}",
+                            title = "${fps.fps} FPS",
                             subtitle = fps.subLabel,
                             selected = isSelected,
                             enabled = isSupported,
                             onClick = {
-                                if (isSupported) {
-                                    localConfig = localConfig.copy(fps = fps)
-                                    onConfigChanged(localConfig)
-                                }
+                                val updated = localConfig.copy(fps = fps)
+                                localConfig = updated
+                                onConfigChanged(updated)
                             }
                         )
                     }
                 }
-                if (!deviceCapability.is120FpsSupported) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "• 120 FPS is disabled because your display refresh rate is ${deviceCapability.refreshRate.toInt()}Hz.",
-                        fontSize = 11.sp,
-                        color = ScreeneryTextSecondary
-                    )
-                }
             }
 
-            // Bitrate (Mbps) Slider
+            // Bitrate Slider
             item {
-                Row(
+                SectionHeader(title = "Bitrate (Quality)")
+                Spacer(modifier = Modifier.height(6.dp))
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    SectionHeader(title = "Bitrate (Mbps)")
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(ScreeneryPillActiveBg)
-                            .border(1.dp, ScreeneryPillActiveBorder, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 14.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "${localConfig.bitrateMbps}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ScreeneryPrimary
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Encoding Bitrate",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${localConfig.bitrateMbps} Mbps",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                            value = localConfig.bitrateMbps.toFloat(),
+                            onValueChange = {
+                                val updated = localConfig.copy(bitrateMbps = it.toInt())
+                                localConfig = updated
+                                onConfigChanged(updated)
+                            },
+                            valueRange = 4f..60f,
+                            steps = 13,
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier.testTag("bitrate_slider")
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = "4 Mbps (Compact)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text = "60 Mbps (Master)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Slider(
-                    value = localConfig.bitrateMbps.toFloat(),
-                    onValueChange = {
-                        localConfig = localConfig.copy(bitrateMbps = it.toInt())
-                        onConfigChanged(localConfig)
-                    },
-                    valueRange = 1f..100f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = ScreeneryPrimary,
-                        activeTrackColor = ScreeneryPrimary,
-                        inactiveTrackColor = Color(0xFFE2E8F0)
-                    )
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            }
+
+            // Video Aspect Ratio Selection
+            item {
+                SectionHeader(title = "Video Aspect Ratio")
+                Spacer(modifier = Modifier.height(10.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(text = "1 Mbps", fontSize = 12.sp, color = ScreeneryTextSecondary)
-                    Text(text = "100 Mbps", fontSize = 12.sp, color = ScreeneryTextSecondary)
+                    items(VideoAspectRatio.entries) { ratio ->
+                        val isSelected = localConfig.aspectRatio == ratio
+                        Card(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    val updated = localConfig.copy(aspectRatio = ratio)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                                .testTag("aspect_ratio_${ratio.name}"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .widthIn(min = 90.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(
+                                            width = when (ratio) {
+                                                VideoAspectRatio.RATIO_16_9, VideoAspectRatio.RATIO_21_9 -> 32.dp
+                                                VideoAspectRatio.RATIO_9_16, VideoAspectRatio.RATIO_3_4 -> 18.dp
+                                                VideoAspectRatio.RATIO_1_1 -> 24.dp
+                                                else -> 22.dp
+                                            },
+                                            height = when (ratio) {
+                                                VideoAspectRatio.RATIO_16_9, VideoAspectRatio.RATIO_21_9 -> 18.dp
+                                                VideoAspectRatio.RATIO_9_16, VideoAspectRatio.RATIO_3_4 -> 30.dp
+                                                VideoAspectRatio.RATIO_1_1 -> 24.dp
+                                                else -> 28.dp
+                                            }
+                                        )
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                        )
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = ratio.label,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = ratio.subLabel,
+                                    fontSize = 11.sp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            // Orientation Selection
+            // Audio System & Sources
             item {
-                SectionHeader(title = "Orientation")
+                SectionHeader(title = "Audio System & Sources")
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    AudioSourceOption.entries.forEach { opt ->
+                        val isSelected = localConfig.audioSource == opt
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    val updated = localConfig.copy(audioSource = opt)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                                .testTag("audio_source_${opt.name}"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                            else MaterialTheme.colorScheme.surfaceVariant
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = when (opt) {
+                                            AudioSourceOption.NONE -> Icons.Default.VolumeOff
+                                            AudioSourceOption.MICROPHONE -> Icons.Default.Mic
+                                            AudioSourceOption.SYSTEM -> Icons.Default.VolumeUp
+                                            AudioSourceOption.BOTH -> Icons.Default.GraphicEq
+                                        },
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = opt.label,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = opt.description,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (localConfig.audioSource != AudioSourceOption.NONE) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "Audio Encoding Quality",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(
+                                    Pair(44100, "44.1 kHz (CD)"),
+                                    Pair(48000, "48.0 kHz (HD)")
+                                ).forEach { (sr, label) ->
+                                    val isSelected = localConfig.audioSampleRate == sr
+                                    PillSelector(
+                                        modifier = Modifier.weight(1f),
+                                        title = "${sr / 1000} kHz",
+                                        subtitle = label,
+                                        selected = isSelected,
+                                        enabled = true,
+                                        onClick = {
+                                            val updated = localConfig.copy(audioSampleRate = sr)
+                                            localConfig = updated
+                                            onConfigChanged(updated)
+                                        }
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(
+                                    Pair(128, "128 kbps"),
+                                    Pair(192, "192 kbps"),
+                                    Pair(256, "256 kbps (Studio)")
+                                ).forEach { (br, label) ->
+                                    val isSelected = localConfig.audioBitrateKbps == br
+                                    PillSelector(
+                                        modifier = Modifier.weight(1f),
+                                        title = "$br kbps",
+                                        subtitle = if (br >= 192) "High Res" else "Standard",
+                                        selected = isSelected,
+                                        enabled = true,
+                                        onClick = {
+                                            val updated = localConfig.copy(audioBitrateKbps = br)
+                                            localConfig = updated
+                                            onConfigChanged(updated)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Video Orientation
+            item {
+                SectionHeader(title = "Orientation Mode")
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -264,12 +729,13 @@ fun SettingsScreen(
                 ) {
                     OrientationCard(
                         modifier = Modifier.weight(1f),
-                        title = "Auto",
+                        title = "Auto Detect",
                         icon = Icons.Default.ScreenRotation,
                         selected = localConfig.orientation == VideoOrientation.AUTO,
                         onClick = {
-                            localConfig = localConfig.copy(orientation = VideoOrientation.AUTO)
-                            onConfigChanged(localConfig)
+                            val updated = localConfig.copy(orientation = VideoOrientation.AUTO)
+                            localConfig = updated
+                            onConfigChanged(updated)
                         }
                     )
                     OrientationCard(
@@ -278,8 +744,9 @@ fun SettingsScreen(
                         icon = Icons.Default.StayCurrentPortrait,
                         selected = localConfig.orientation == VideoOrientation.PORTRAIT,
                         onClick = {
-                            localConfig = localConfig.copy(orientation = VideoOrientation.PORTRAIT)
-                            onConfigChanged(localConfig)
+                            val updated = localConfig.copy(orientation = VideoOrientation.PORTRAIT)
+                            localConfig = updated
+                            onConfigChanged(updated)
                         }
                     )
                     OrientationCard(
@@ -288,90 +755,75 @@ fun SettingsScreen(
                         icon = Icons.Default.StayCurrentLandscape,
                         selected = localConfig.orientation == VideoOrientation.LANDSCAPE,
                         onClick = {
-                            localConfig = localConfig.copy(orientation = VideoOrientation.LANDSCAPE)
-                            onConfigChanged(localConfig)
+                            val updated = localConfig.copy(orientation = VideoOrientation.LANDSCAPE)
+                            localConfig = updated
+                            onConfigChanged(updated)
                         }
                     )
                 }
             }
 
-            // Audio Source Selection
+            // Controls & Extra Features
             item {
-                SectionHeader(title = "Audio Source")
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(
-                        AudioSourceOption.SYSTEM,
-                        AudioSourceOption.MICROPHONE,
-                        AudioSourceOption.BOTH,
-                        AudioSourceOption.NONE
-                    ).forEach { source ->
-                        val isSelected = localConfig.audioSource == source
-                        Card(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(14.dp))
-                                .clickable {
-                                    localConfig = localConfig.copy(audioSource = source)
-                                    onConfigChanged(localConfig)
-                                },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) ScreeneryPillActiveBg else ScreeneryPillInactive
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.5.dp,
-                                if (isSelected) ScreeneryPillActiveBorder else Color.Transparent
-                            )
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 12.dp, horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = source.label.split(" ").first(),
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) ScreeneryPrimary else ScreeneryTextPrimary
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Additional Options
-            item {
-                SectionHeader(title = "Additional Options")
+                SectionHeader(title = "Capture Options")
                 Spacer(modifier = Modifier.height(10.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = ScreenerySurface)
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                        // Show touches
                         OptionSwitchRow(
-                            title = "Show Touches",
-                            subtitle = "Visual touch feedback during recording",
-                            checked = localConfig.showTouches,
+                            title = "Floating Control Bubble",
+                            subtitle = "Draggable on-screen widget for recording status",
+                            checked = localConfig.floatingControls,
                             onCheckedChange = {
-                                localConfig = localConfig.copy(showTouches = it)
-                                onConfigChanged(localConfig)
+                                if (it && !Settings.canDrawOverlays(context)) {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${context.packageName}")
+                                    )
+                                    context.startActivity(intent)
+                                }
+                                val updated = localConfig.copy(floatingControls = it)
+                                localConfig = updated
+                                onConfigChanged(updated)
                             }
                         )
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        if (localConfig.floatingControls) {
+                            androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
-                        // Countdown
+                            OptionSwitchRow(
+                                title = "Auto-Hide Floating Bar While Recording",
+                                subtitle = "Hides floating widget during active recording so your video is clean. Use Notification panel to Pause/Resume/Stop.",
+                                checked = localConfig.autoHideFloatingBar,
+                                onCheckedChange = {
+                                    val updated = localConfig.copy(autoHideFloatingBar = it)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                            )
+                        }
+
+                        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                        OptionSwitchRow(
+                            title = "Show Screen Touches",
+                            subtitle = "Visual indicator on every screen tap",
+                            checked = localConfig.showTouches,
+                            onCheckedChange = {
+                                val updated = localConfig.copy(showTouches = it)
+                                localConfig = updated
+                                onConfigChanged(updated)
+                            }
+                        )
+
+                        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
                         OptionPickerRow(
-                            title = "Countdown",
-                            value = if (localConfig.countdownSeconds == 0) "Off" else "${localConfig.countdownSeconds}s",
+                            title = "Start Countdown",
+                            value = if (localConfig.countdownSeconds == 0) "Off" else "${localConfig.countdownSeconds} seconds",
                             onClick = {
                                 val next = when (localConfig.countdownSeconds) {
                                     0 -> 3
@@ -379,121 +831,91 @@ fun SettingsScreen(
                                     5 -> 10
                                     else -> 0
                                 }
-                                localConfig = localConfig.copy(countdownSeconds = next)
-                                onConfigChanged(localConfig)
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // Floating controls
-                        OptionSwitchRow(
-                            title = "Floating Controls",
-                            subtitle = "Overlay pill (● 00:42) with quick pause/stop",
-                            checked = localConfig.floatingControls,
-                            onCheckedChange = {
-                                if (it && !Settings.canDrawOverlays(context)) {
-                                    try {
-                                        val intent = Intent(
-                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                            Uri.parse("package:${context.packageName}")
-                                        )
-                                        context.startActivity(intent)
-                                    } catch (_: Exception) {}
-                                }
-                                localConfig = localConfig.copy(floatingControls = it)
-                                onConfigChanged(localConfig)
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // Auto-stop timer
-                        OptionPickerRow(
-                            title = "Auto-stop Timer",
-                            value = if (localConfig.autoStopMinutes == 0) "Off" else "${localConfig.autoStopMinutes} min",
-                            onClick = {
-                                val next = when (localConfig.autoStopMinutes) {
-                                    0 -> 1
-                                    1 -> 5
-                                    5 -> 10
-                                    10 -> 30
-                                    else -> 0
-                                }
-                                localConfig = localConfig.copy(autoStopMinutes = next)
-                                onConfigChanged(localConfig)
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // Hide status bar
-                        OptionSwitchRow(
-                            title = "Hide Status Bar",
-                            subtitle = "Full screen record without top system indicators",
-                            checked = localConfig.hideStatusBar,
-                            onCheckedChange = {
-                                localConfig = localConfig.copy(hideStatusBar = it)
-                                onConfigChanged(localConfig)
+                                val updated = localConfig.copy(countdownSeconds = next)
+                                localConfig = updated
+                                onConfigChanged(updated)
                             }
                         )
                     }
                 }
-            }
 
-            // Device Diagnostics & Detection
-            item {
-                SectionHeader(title = "Hardware Detection")
                 Spacer(modifier = Modifier.height(10.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = ScreenerySurfaceVariant)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Notification Panel Quick Controls",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Pause, Resume & Stop buttons remain active in your status bar notification drawer while recording any app or game.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Device Diagnostics Section
+            item {
+                SectionHeader(title = "Device Encoder Capabilities")
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        DiagnosticRow(label = "Display Refresh Rate", value = "${deviceCapability.refreshRate.toInt()} Hz")
-                        DiagnosticRow(label = "Native Resolution", value = "${deviceCapability.deviceWidth} x ${deviceCapability.deviceHeight}")
-                        DiagnosticRow(label = "Hardware HEVC/H.265", value = if (deviceCapability.isHevcSupported) "Supported" else "Not available")
-                        DiagnosticRow(label = "HDR Display", value = if (deviceCapability.isHdrSupported) "Supported" else "SDR")
-                        val availMb = deviceCapability.availableStorageBytes / (1024 * 1024)
-                        DiagnosticRow(label = "Free Storage Space", value = if (availMb > 1024) "%.1f GB".format(availMb / 1024.0) else "$availMb MB")
+                        DiagnosticRow(
+                            label = "Native Display",
+                            value = "${deviceCapability.deviceWidth} x ${deviceCapability.deviceHeight} px @ ${deviceCapability.refreshRate.toInt()}Hz"
+                        )
+                        DiagnosticRow(
+                            label = "Max Supported FPS",
+                            value = "${deviceCapability.maxSupportedFps} FPS"
+                        )
+                        DiagnosticRow(
+                            label = "4K Recording Supported",
+                            value = if (deviceCapability.is4kSupported) "Yes (UHD)" else "No (FHD max)"
+                        )
+                        DiagnosticRow(
+                            label = "Hardware HEVC / H.265",
+                            value = if (deviceCapability.isHevcSupported) "Available" else "H.264 Only"
+                        )
                     }
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(30.dp))
-            }
-        }
-
-        // Bottom Save Settings Button
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(ScreeneryBg)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-        ) {
-            Button(
-                onClick = {
-                    onConfigChanged(localConfig)
-                    showSavedMessage = true
-                    onBack()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-                    .testTag("save_settings_button"),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = ScreeneryPrimary)
-            ) {
-                Text(
-                    text = "Save Settings",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -505,7 +927,7 @@ private fun SectionHeader(title: String) {
         text = title,
         fontSize = 15.sp,
         fontWeight = FontWeight.Bold,
-        color = ScreeneryTextPrimary
+        color = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -519,14 +941,14 @@ private fun PillSelector(
     onClick: () -> Unit
 ) {
     val bg = when {
-        !enabled -> Color(0xFFF3F4F6)
-        selected -> ScreeneryPillActiveBg
-        else -> ScreenerySurface
+        !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        selected -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surface
     }
     val border = when {
         !enabled -> Color.Transparent
-        selected -> ScreeneryPillActiveBorder
-        else -> Color(0xFFE5E7EB)
+        selected -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
     }
 
     Card(
@@ -545,12 +967,12 @@ private fun PillSelector(
         ) {
             Text(
                 text = title,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = when {
-                    !enabled -> Color(0xFF9CA3AF)
-                    selected -> ScreeneryPrimary
-                    else -> ScreeneryTextPrimary
+                    !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    selected -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSurface
                 }
             )
             Spacer(modifier = Modifier.height(2.dp))
@@ -558,9 +980,9 @@ private fun PillSelector(
                 text = subtitle,
                 fontSize = 11.sp,
                 color = when {
-                    !enabled -> Color(0xFF9CA3AF)
-                    selected -> ScreeneryPrimary
-                    else -> ScreeneryTextSecondary
+                    !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    selected -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
             )
         }
@@ -581,11 +1003,11 @@ private fun OrientationCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) ScreeneryPillActiveBg else ScreenerySurface
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
         ),
         border = androidx.compose.foundation.BorderStroke(
             1.5.dp,
-            if (selected) ScreeneryPillActiveBorder else Color(0xFFE5E7EB)
+            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         )
     ) {
         Column(
@@ -597,7 +1019,7 @@ private fun OrientationCard(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = if (selected) ScreeneryPrimary else ScreeneryTextSecondary,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -605,7 +1027,7 @@ private fun OrientationCard(
                 text = title,
                 fontSize = 13.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                color = if (selected) ScreeneryPrimary else ScreeneryTextPrimary
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -630,12 +1052,12 @@ private fun OptionSwitchRow(
                 text = title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = ScreeneryTextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = subtitle,
                 fontSize = 12.sp,
-                color = ScreeneryTextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Switch(
@@ -643,7 +1065,7 @@ private fun OptionSwitchRow(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = ScreeneryPrimary
+                checkedTrackColor = MaterialTheme.colorScheme.primary
             )
         )
     }
@@ -668,20 +1090,20 @@ private fun OptionPickerRow(
             text = title,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = ScreeneryTextPrimary
+            color = MaterialTheme.colorScheme.onSurface
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = value,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = ScreeneryPrimary
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = ScreeneryTextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -694,7 +1116,7 @@ private fun DiagnosticRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, fontSize = 12.sp, color = ScreeneryTextSecondary)
-        Text(text = value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = ScreeneryTextPrimary)
+        Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }

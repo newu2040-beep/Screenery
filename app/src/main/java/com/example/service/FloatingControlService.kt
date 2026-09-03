@@ -18,9 +18,11 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.example.data.repository.RecordingRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -30,12 +32,14 @@ class FloatingControlService : Service() {
     private var floatView: LinearLayout? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var statusJob: Job? = null
+    private var autoHideJob: Job? = null
 
     private var initialX = 0
     private var initialY = 0
     private var initialTouchX = 0f
     private var initialTouchY = 0f
     private var isExpanded = false
+    private var autoHideEnabled = true
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -47,6 +51,9 @@ class FloatingControlService : Service() {
                 stopSelf()
                 return
             }
+
+            val repo = RecordingRepository(applicationContext)
+            autoHideEnabled = repo.currentConfig.value.autoHideFloatingBar
 
             windowManager = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
             createFloatingBubbleView()
@@ -203,6 +210,7 @@ class FloatingControlService : Service() {
                     initialY = params.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
+                    scheduleAutoHideTimer()
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -224,6 +232,7 @@ class FloatingControlService : Service() {
                             windowManager?.updateViewLayout(floatView, params)
                         } catch (_: Exception) {}
                     }
+                    scheduleAutoHideTimer()
                     true
                 }
                 else -> false
@@ -232,8 +241,30 @@ class FloatingControlService : Service() {
 
         try {
             windowManager?.addView(floatView, params)
+            if (autoHideEnabled) {
+                scheduleAutoHideTimer(delayMillis = 2500L)
+            }
         } catch (_: Exception) {
             stopSelf()
+        }
+    }
+
+    private fun scheduleAutoHideTimer(delayMillis: Long = 3000L) {
+        if (!autoHideEnabled) return
+        autoHideJob?.cancel()
+        autoHideJob = serviceScope.launch {
+            delay(delayMillis)
+            val currentStatus = ScreenRecordingService.recordingStatus.value
+            // Only auto-hide if recording is active and not paused
+            if (currentStatus.isRecording && !currentStatus.isPaused && floatView != null) {
+                try {
+                    floatView?.animate()?.alpha(0f)?.setDuration(400)?.withEndAction {
+                        floatView?.visibility = View.GONE
+                    }?.start()
+                } catch (_: Exception) {
+                    floatView?.visibility = View.GONE
+                }
+            }
         }
     }
 
@@ -247,6 +278,10 @@ class FloatingControlService : Service() {
         val timerText = bubble?.getChildAt(1) as? TextView
 
         if (status.isPaused) {
+            // When paused, make sure the view is visible so the user is aware
+            autoHideJob?.cancel()
+            floatView?.visibility = View.VISIBLE
+            floatView?.alpha = 1f
             dotIcon?.text = "⏸"
             dotIcon?.setTextColor(0xFFFBBF24.toInt()) // Amber
             timerText?.text = " $timeFormatted (Paused)"
@@ -254,6 +289,11 @@ class FloatingControlService : Service() {
             dotIcon?.text = "●"
             dotIcon?.setTextColor(0xFFEF4444.toInt()) // Red
             timerText?.text = " $timeFormatted"
+
+            // If the view just transitioned to active and autoHide is enabled, hide after delay
+            if (autoHideEnabled && floatView?.visibility == View.VISIBLE && (autoHideJob == null || !autoHideJob!!.isActive)) {
+                scheduleAutoHideTimer(delayMillis = 2000L)
+            }
         }
 
         val controls = floatView?.getChildAt(1) as? LinearLayout
@@ -270,6 +310,7 @@ class FloatingControlService : Service() {
     }
 
     override fun onDestroy() {
+        autoHideJob?.cancel()
         statusJob?.cancel()
         if (floatView != null) {
             try {
@@ -280,3 +321,4 @@ class FloatingControlService : Service() {
         super.onDestroy()
     }
 }
+

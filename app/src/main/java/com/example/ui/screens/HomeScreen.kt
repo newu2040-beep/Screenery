@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,10 +26,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Tv
@@ -59,18 +69,16 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.AppThemeMode
 import com.example.data.model.DeviceCapability
 import com.example.data.model.RecordingConfig
 import com.example.data.model.RecordingItem
 import com.example.service.RecordingStatus
-import com.example.ui.theme.ScreeneryBg
-import com.example.ui.theme.ScreeneryPrimary
 import com.example.ui.theme.ScreeneryRecordRed
-import com.example.ui.theme.ScreenerySurface
-import com.example.ui.theme.ScreenerySurfaceVariant
-import com.example.ui.theme.ScreeneryTextPrimary
-import com.example.ui.theme.ScreeneryTextSecondary
-import com.example.ui.theme.ScreeneryTextTertiary
+import com.example.ui.theme.ScreeneryRecordRedGlow
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -81,6 +89,8 @@ fun HomeScreen(
     onStartRecordingClick: () -> Unit,
     onPauseResumeClick: () -> Unit,
     onStopRecordingClick: () -> Unit,
+    onEditProfileClick: () -> Unit,
+    onToggleThemeModeClick: () -> Unit,
     onSeeAllQuickSettings: () -> Unit,
     onSeeAllRecordings: () -> Unit,
     onPlayRecording: (RecordingItem) -> Unit,
@@ -93,46 +103,90 @@ fun HomeScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(ScreeneryBg),
+            .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        // Top Welcome Bar
+        // Top Welcome Bar with Customizable User Profile & Dark/Light Toggle
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 20.dp),
+                    .padding(top = 8.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "Hello, Rahul \uD83D\uDC4B",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ScreeneryTextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Ready to record something great?",
-                        fontSize = 14.sp,
-                        color = ScreeneryTextSecondary
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable(onClick = onEditProfileClick)
+                        .padding(4.dp)
+                        .testTag("user_profile_header")
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = config.userAvatarEmoji,
+                            fontSize = 24.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Hello, ${config.userName}",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Profile",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "${config.pastelTheme.displayName} • Ready to record",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFEF3C7)), // Soft warm crown pill
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.WorkspacePremium,
-                        contentDescription = "Premium Status",
-                        tint = Color(0xFFF59E0B),
-                        modifier = Modifier.size(24.dp)
-                    )
+                    // Dark / Light quick switcher icon button
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable(onClick = onToggleThemeModeClick)
+                            .testTag("theme_mode_toggle_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = when (config.themeMode) {
+                                AppThemeMode.DARK -> Icons.Default.DarkMode
+                                AppThemeMode.LIGHT -> Icons.Default.LightMode
+                                AppThemeMode.SYSTEM -> Icons.Default.Palette
+                            },
+                            contentDescription = "Toggle Theme Mode",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -140,147 +194,82 @@ fun HomeScreen(
         // Hero Recording Card
         item {
             HeroRecordingCard(
+                recordingStatus = recordingStatus,
                 config = config,
-                status = recordingStatus,
                 onStartClick = onStartRecordingClick,
                 onPauseResumeClick = onPauseResumeClick,
                 onStopClick = onStopRecordingClick
             )
-            Spacer(modifier = Modifier.height(26.dp))
         }
 
-        // Quick Settings Section
+        // Quick Config Badges / Status Strip
         item {
+            Spacer(modifier = Modifier.height(20.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Quick Settings",
-                    fontSize = 18.sp,
+                    text = "Recording Setup",
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ScreeneryTextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-                TextButton(onClick = onSeeAllQuickSettings) {
+                TextButton(
+                    onClick = onSeeAllQuickSettings,
+                    modifier = Modifier.testTag("quick_settings_button")
+                ) {
                     Text(
-                        text = "See All",
-                        fontSize = 14.sp,
+                        text = "Customize",
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = ScreeneryPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(10.dp))
-
-            // 2x2 Grid of Quick Cards
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickSettingCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Tv,
-                        title = "Resolution",
-                        value = "${config.resolution.label} (${config.resolution.width}p)".replace("0p", "Native"),
-                        iconTint = Color(0xFF6366F1),
-                        onClick = onSeeAllQuickSettings
-                    )
-                    QuickSettingCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.GraphicEq,
-                        title = "Frame Rate",
-                        value = "${config.fps.fps} FPS",
-                        iconTint = Color(0xFF8B5CF6),
-                        onClick = onSeeAllQuickSettings
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickSettingCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Speed,
-                        title = "Bitrate",
-                        value = "${config.bitrateMbps} Mbps",
-                        iconTint = Color(0xFF3B82F6),
-                        onClick = onSeeAllQuickSettings
-                    )
-                    QuickSettingCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.ScreenRotation,
-                        title = "Orientation",
-                        value = config.orientation.label,
-                        iconTint = Color(0xFFA855F7),
-                        onClick = onSeeAllQuickSettings
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(26.dp))
+            ConfigBadgesRow(config = config, onBadgeClick = onSeeAllQuickSettings)
         }
 
         // Recent Recordings Section
         item {
+            Spacer(modifier = Modifier.height(24.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Recent Recordings",
-                    fontSize = 18.sp,
+                    text = "Recent Captures",
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ScreeneryTextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-                TextButton(onClick = onSeeAllRecordings) {
-                    Text(
-                        text = "See All",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = ScreeneryPrimary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        if (recentRecordings.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = ScreenerySurface)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                if (recentRecordings.isNotEmpty()) {
+                    TextButton(
+                        onClick = onSeeAllRecordings,
+                        modifier = Modifier.testTag("view_all_recordings_button")
                     ) {
                         Text(
-                            text = "No recordings yet",
-                            fontWeight = FontWeight.Bold,
-                            color = ScreeneryTextPrimary,
-                            fontSize = 16.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Tap the big button above to start your first recording!",
-                            color = ScreeneryTextSecondary,
-                            fontSize = 13.sp
+                            text = "View All (${recentRecordings.size})",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
+        if (recentRecordings.isEmpty()) {
+            item {
+                EmptyRecordingsCard(onStartRecordingClick = onStartRecordingClick)
+            }
         } else {
             items(recentRecordings, key = { it.id }) { item ->
-                RecentRecordingItemRow(
+                RecentRecordingItemCard(
                     item = item,
                     onPlay = { onPlayRecording(item) },
                     onTrim = { onTrimRecording(item) },
@@ -293,291 +282,305 @@ fun HomeScreen(
         }
 
         item {
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-fun HeroRecordingCard(
+private fun HeroRecordingCard(
+    recordingStatus: RecordingStatus,
     config: RecordingConfig,
-    status: RecordingStatus,
     onStartClick: () -> Unit,
     onPauseResumeClick: () -> Unit,
     onStopClick: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val isRecording = recordingStatus.isRecording
+    val isPaused = recordingStatus.isPaused
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse_transition")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.12f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000),
+            animation = tween(900),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pulseScale"
+        label = "pulse_scale"
     )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
             .testTag("hero_recording_card"),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF5B61F4),
-                            Color(0xFF7E44F3)
-                        )
-                    )
-                )
-                .padding(vertical = 32.dp, horizontal = 24.dp),
-            contentAlignment = Alignment.Center
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (!status.isRecording) {
-                    // Start Recording state
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.22f))
-                            .clickable(onClick = onStartClick)
-                            .testTag("start_recording_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(70.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.40f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF6366F1))
-                                )
-                            }
+            // Live Status Indicator Pill
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        if (isRecording) {
+                            if (isPaused) Color(0xFFFEF3C7) else Color(0xFFFFE4E6)
+                        } else {
+                            MaterialTheme.colorScheme.primaryContainer
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Text(
-                        text = "Start Recording",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
                     )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "Tap to start",
-                        fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Configuration pill
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.Black.copy(alpha = 0.18f))
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = config.summaryString,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                    }
-
-                } else {
-                    // Actively recording state
-                    val minutes = status.elapsedSeconds / 60
-                    val seconds = status.elapsedSeconds % 60
-                    val timeFormatted = "%02d:%02d".format(minutes, seconds)
-
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .scale(if (!status.isPaused) pulseScale else 1f)
+                            .size(8.dp)
                             .clip(CircleShape)
                             .background(
-                                if (status.isPaused) Color(0x33F59E0B) else Color(0x44EF4444)
-                            ),
+                                if (isRecording) {
+                                    if (isPaused) Color(0xFFF59E0B) else ScreeneryRecordRed
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                }
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isRecording) {
+                            if (isPaused) "RECORDING PAUSED" else "LIVE RECORDING"
+                        } else {
+                            "READY TO CAPTURE"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isRecording) {
+                            if (isPaused) Color(0xFFB45309) else ScreeneryRecordRed
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Timer or Ready Info
+            if (isRecording) {
+                Text(
+                    text = recordingStatus.formattedTime,
+                    fontSize = 42.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.testTag("recording_timer_text")
+                )
+                Text(
+                    text = "${config.resolution.label} • ${config.aspectRatio.label} • ${config.fps.fps} FPS • ${config.audioSource.label}",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = "One Tap Screen Record",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Lossless capture with floating controls & auto-gallery sync",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Main Action Controls
+            if (!isRecording) {
+                // Large Start Recording Button
+                Box(
+                    modifier = Modifier
+                        .size(92.dp)
+                        .scale(1f)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary
+                                )
+                            )
+                        )
+                        .clickable(onClick = onStartClick)
+                        .testTag("start_recording_fab"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(64.dp)
+                                .size(28.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    if (status.isPaused) Color(0xFFF59E0B) else ScreeneryRecordRed
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (status.isPaused) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = if (status.isPaused) "Recording Paused" else "Recording in Progress",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = timeFormatted,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    // Controls row
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White.copy(alpha = 0.25f))
-                                .clickable(onClick = onPauseResumeClick)
-                                .padding(horizontal = 20.dp, vertical = 10.dp)
-                                .testTag("hero_pause_resume_button"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (status.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (status.isPaused) "Resume" else "Pause",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0xFFEF4444))
-                                .clickable(onClick = onStopClick)
-                                .padding(horizontal = 24.dp, vertical = 10.dp)
-                                .testTag("hero_stop_button"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Stop,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Stop",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
+                                .background(Color.White)
+                        )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Tap to Record",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                // Controls during recording: Pause/Resume + Stop
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Pause/Resume Button
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable(onClick = onPauseResumeClick)
+                            .testTag("pause_resume_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                            contentDescription = if (isPaused) "Resume" else "Pause",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(32.dp))
+
+                    // Stop Button
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .scale(pulseScale)
+                            .clip(CircleShape)
+                            .background(ScreeneryRecordRed)
+                            .clickable(onClick = onStopClick)
+                            .testTag("stop_recording_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Stop,
+                            contentDescription = "Stop",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = if (isPaused) "Recording Paused • Tap Resume or use Notification Drawer" else "● Recording Live • Floating bar auto-hidden • Controls in Notification Drawer",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
             }
         }
     }
 }
 
 @Composable
-fun QuickSettingCard(
+private fun ConfigBadgesRow(config: RecordingConfig, onBadgeClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onBadgeClick),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        BadgeItem(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.Tv,
+            title = config.resolution.label,
+            sub = "Res"
+        )
+        BadgeItem(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.AspectRatio,
+            title = config.aspectRatio.label,
+            sub = "Ratio"
+        )
+        BadgeItem(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.Speed,
+            title = "${config.fps.fps} FPS",
+            sub = "${config.bitrateMbps}M"
+        )
+        BadgeItem(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Outlined.GraphicEq,
+            title = config.audioSource.label,
+            sub = "Audio"
+        )
+        BadgeItem(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.ScreenRotation,
+            title = config.orientation.label,
+            sub = "Orient"
+        )
+    }
+}
+
+@Composable
+private fun BadgeItem(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     title: String,
-    value: String,
-    iconTint: Color,
-    onClick: () -> Unit
+    sub: String
 ) {
     Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = ScreenerySurface),
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(iconTint.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = iconTint,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = title,
-                fontSize = 12.sp,
-                color = ScreeneryTextSecondary,
-                fontWeight = FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = value,
-                fontSize = 15.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = ScreeneryTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+            Text(
+                text = sub,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
         }
@@ -585,7 +588,52 @@ fun QuickSettingCard(
 }
 
 @Composable
-fun RecentRecordingItemRow(
+private fun EmptyRecordingsCard(onStartRecordingClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "📹", fontSize = 26.sp)
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = "No recordings yet",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Your high-resolution screen recordings will show up here, automatically synced to your Gallery.",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = onStartRecordingClick) {
+                Text("Start First Recording", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentRecordingItemCard(
     item: RecordingItem,
     onPlay: () -> Unit,
     onTrim: () -> Unit,
@@ -594,15 +642,16 @@ fun RecentRecordingItemRow(
     onDetails: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    val dateString = SimpleDateFormat("dd MMM, h:mm a", Locale.getDefault()).format(Date(item.dateAdded))
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onPlay)
-            .testTag("recent_recording_${item.id}"),
+            .testTag("recent_item_${item.id}"),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = ScreenerySurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -618,7 +667,10 @@ fun RecentRecordingItemRow(
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.linearGradient(
-                            listOf(Color(0xFF312E81), Color(0xFF6B21A8))
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary
+                            )
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -627,45 +679,40 @@ fun RecentRecordingItemRow(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
                     tint = Color.White,
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            // Details
+            // Information
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ScreeneryTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = item.specsSummary,
+                    text = "${item.formattedDuration} • ${item.formattedSize} • ${item.resolutionString}",
                     fontSize = 12.sp,
-                    color = ScreeneryTextSecondary,
-                    maxLines = 1
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = dateString,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
 
-            // Duration
-            Text(
-                text = item.formattedDuration,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = ScreeneryTextTertiary
-            )
-
-            // Overflow Menu
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More Options",
-                        tint = ScreeneryTextSecondary
+                        contentDescription = "Options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -674,14 +721,16 @@ fun RecentRecordingItemRow(
                     onDismissRequest = { menuExpanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Play") },
+                        text = { Text("Play Video") },
+                        leadingIcon = { Icon(Icons.Default.PlayArrow, null) },
                         onClick = {
                             menuExpanded = false
                             onPlay()
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Trim") },
+                        text = { Text("Trim (Cut)") },
+                        leadingIcon = { Icon(Icons.Default.ContentCut, null) },
                         onClick = {
                             menuExpanded = false
                             onTrim()
@@ -689,6 +738,7 @@ fun RecentRecordingItemRow(
                     )
                     DropdownMenuItem(
                         text = { Text("Share") },
+                        leadingIcon = { Icon(Icons.Default.Share, null) },
                         onClick = {
                             menuExpanded = false
                             onShare()
@@ -696,6 +746,7 @@ fun RecentRecordingItemRow(
                     )
                     DropdownMenuItem(
                         text = { Text("Details") },
+                        leadingIcon = { Icon(Icons.Default.Info, null) },
                         onClick = {
                             menuExpanded = false
                             onDetails()
@@ -703,6 +754,7 @@ fun RecentRecordingItemRow(
                     )
                     DropdownMenuItem(
                         text = { Text("Delete", color = ScreeneryRecordRed) },
+                        leadingIcon = { Icon(Icons.Default.Delete, null, tint = ScreeneryRecordRed) },
                         onClick = {
                             menuExpanded = false
                             onDelete()
