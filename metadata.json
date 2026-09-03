@@ -1,0 +1,7 @@
+{
+  "name": "Screenery",
+  "description": "Premium professional screen recorder with custom quality, bitrate, FPS and built-in video management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
