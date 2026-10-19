@@ -62,6 +62,7 @@ import com.example.data.model.AudioSourceOption
 import com.example.data.model.RecordingItem
 import com.example.service.ScreenRecordingService
 import com.example.ui.components.DeleteConfirmationDialog
+import com.example.ui.components.OpticalFlowDialog
 import com.example.ui.components.ProfileEditDialog
 import com.example.ui.components.RenameDialog
 import com.example.ui.components.TrimmingDialog
@@ -128,6 +129,9 @@ class MainActivity : ComponentActivity() {
             val allRecordings by viewModel.allRecordings.collectAsStateWithLifecycle()
             val isTrimming by viewModel.isTrimming.collectAsStateWithLifecycle()
             val trimProgress by viewModel.trimProgress.collectAsStateWithLifecycle()
+            val isInterpolating by viewModel.isInterpolating.collectAsStateWithLifecycle()
+            val interpolateProgress by viewModel.interpolateProgress.collectAsStateWithLifecycle()
+            val interpolateStatusText by viewModel.interpolateStatusText.collectAsStateWithLifecycle()
 
             val navController = rememberNavController()
             val snackbarHostState = remember { SnackbarHostState() }
@@ -136,6 +140,7 @@ class MainActivity : ComponentActivity() {
             var itemToRename by remember { mutableStateOf<RecordingItem?>(null) }
             var itemToDelete by remember { mutableStateOf<RecordingItem?>(null) }
             var itemToTrim by remember { mutableStateOf<RecordingItem?>(null) }
+            var itemToInterpolate by remember { mutableStateOf<RecordingItem?>(null) }
             var activePlayingItem by remember { mutableStateOf<RecordingItem?>(null) }
             var showProfileDialog by remember { mutableStateOf(false) }
 
@@ -250,6 +255,7 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("player")
                                     },
                                     onTrim = { item -> itemToTrim = item },
+                                    onOpticalFlow = { item -> itemToInterpolate = item },
                                     onRename = { item -> itemToRename = item },
                                     onShare = { item -> shareRecordingItem(item) },
                                     onDelete = { item -> itemToDelete = item },
@@ -277,6 +283,7 @@ class MainActivity : ComponentActivity() {
                                         item = item,
                                         onBack = { navController.popBackStack() },
                                         onTrim = { itemToTrim = item },
+                                        onOpticalFlow = { itemToInterpolate = item },
                                         onShare = { shareRecordingItem(item) },
                                         onDelete = { itemToDelete = item },
                                         onDetails = {
@@ -346,6 +353,29 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onDismiss = { itemToTrim = null }
+                            )
+                        }
+
+                        // Optical-Flow Frame Interpolation Dialog
+                        itemToInterpolate?.let { item ->
+                            OpticalFlowDialog(
+                                item = item,
+                                isProcessing = isInterpolating,
+                                progress = interpolateProgress,
+                                statusText = interpolateStatusText,
+                                onStart = { multiplier ->
+                                    viewModel.interpolateRecordingOpticalFlow(item, multiplier) { success, newItem ->
+                                        itemToInterpolate = null
+                                        scope.launch {
+                                            if (success && newItem != null) {
+                                                snackbarHostState.showSnackbar("Optical-Flow ${newItem.fps} FPS video generated & saved to Gallery!")
+                                            } else {
+                                                snackbarHostState.showSnackbar("Optical-Flow interpolation failed. Please try again.")
+                                            }
+                                        }
+                                    }
+                                },
+                                onDismiss = { itemToInterpolate = null }
                             )
                         }
 

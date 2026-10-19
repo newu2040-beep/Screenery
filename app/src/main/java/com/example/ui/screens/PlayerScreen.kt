@@ -90,6 +90,7 @@ fun PlayerScreen(
     item: RecordingItem,
     onBack: () -> Unit,
     onTrim: () -> Unit,
+    onOpticalFlow: () -> Unit = {},
     onShare: () -> Unit,
     onDelete: () -> Unit,
     onDetails: () -> Unit,
@@ -438,26 +439,55 @@ fun PlayerScreen(
 
             // Primary Button: Edit Recording
             item {
-                Button(
-                    onClick = onTrim,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                        .testTag("edit_recording_button"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCut,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Edit Recording (Trim)",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onOpticalFlow,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(54.dp)
+                            .testTag("player_optical_flow_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Optical Flow 2x",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Button(
+                        onClick = onTrim,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(54.dp)
+                            .testTag("edit_recording_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCut,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Trim (Edit)",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
 

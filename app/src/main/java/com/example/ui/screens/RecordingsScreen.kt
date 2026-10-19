@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -83,6 +84,7 @@ fun RecordingsScreen(
     recordings: List<RecordingItem>,
     onPlay: (RecordingItem) -> Unit,
     onTrim: (RecordingItem) -> Unit,
+    onOpticalFlow: (RecordingItem) -> Unit = {},
     onRename: (RecordingItem) -> Unit,
     onShare: (RecordingItem) -> Unit,
     onDelete: (RecordingItem) -> Unit,
@@ -278,6 +280,7 @@ fun RecordingsScreen(
                         item = item,
                         onPlay = { onPlay(item) },
                         onTrim = { onTrim(item) },
+                        onOpticalFlow = { onOpticalFlow(item) },
                         onRename = { onRename(item) },
                         onShare = { onShare(item) },
                         onDelete = { onDelete(item) },
@@ -294,6 +297,7 @@ fun RecordingCardItem(
     item: RecordingItem,
     onPlay: () -> Unit,
     onTrim: () -> Unit,
+    onOpticalFlow: () -> Unit = {},
     onRename: () -> Unit,
     onShare: () -> Unit,
     onDelete: () -> Unit,
@@ -416,6 +420,14 @@ fun RecordingCardItem(
                             onClick = {
                                 menuExpanded = false
                                 onPlay()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Optical-Flow Smooth (2x FPS)") },
+                            leadingIcon = { Icon(Icons.Default.Speed, null, tint = MaterialTheme.colorScheme.primary) },
+                            onClick = {
+                                menuExpanded = false
+                                onOpticalFlow()
                             }
                         )
                         DropdownMenuItem(

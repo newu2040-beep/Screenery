@@ -11,8 +11,10 @@ import android.os.StatFs
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
+import com.example.data.model.AudioCodecFormat
 import com.example.data.model.DeviceCapability
 import com.example.data.model.RecordingConfig
+import com.example.data.model.VideoCodecFormat
 import com.example.data.model.VideoFps
 import com.example.data.model.VideoResolution
 
@@ -66,6 +68,7 @@ object DeviceDetector {
         val hardwareEncoders = mutableListOf<String>()
         var isHevcSupported = false
         var isAvcSupported = false
+        var isAv1Supported = false
         var maxEncoderWidth = 1920
         var maxEncoderHeight = 1080
         var maxEncoderFps = 60
@@ -113,6 +116,10 @@ object DeviceDetector {
                                 maxEncoderFps = maxOf(maxEncoderFps, videoCaps.supportedFrameRates.upper.toInt())
                             }
                         } catch (_: Exception) {}
+                    } else if (type.equals("video/av01", ignoreCase = true)) {
+                        isAv1Supported = true
+                        val name = "${info.name} (AV1)"
+                        if (!hardwareEncoders.contains(name)) hardwareEncoders.add(name)
                     }
                 }
             }
@@ -155,6 +162,31 @@ object DeviceDetector {
         if (is120FpsSupported) {
             supportedFpsList.add(VideoFps.FPS_120)
         }
+        val is144FpsSupported = effectiveMaxFps >= 140
+        if (is144FpsSupported) {
+            supportedFpsList.add(VideoFps.FPS_144)
+        }
+
+        // Codecs list
+        val supportedCodecs = mutableListOf<VideoCodecFormat>()
+        supportedCodecs.add(VideoCodecFormat.H264)
+        if (isHevcSupported) {
+            supportedCodecs.add(VideoCodecFormat.HEVC)
+        }
+        supportedCodecs.add(VideoCodecFormat.PRO_RES_MASTER)
+        if (isAv1Supported) {
+            supportedCodecs.add(VideoCodecFormat.AV1)
+        }
+
+        // Audio Codecs list
+        val supportedAudioCodecs = mutableListOf<AudioCodecFormat>()
+        supportedAudioCodecs.add(AudioCodecFormat.AAC_LC)
+        supportedAudioCodecs.add(AudioCodecFormat.AAC_HE)
+        supportedAudioCodecs.add(AudioCodecFormat.AAC_ELD)
+        val isOpusSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        if (isOpusSupported) {
+            supportedAudioCodecs.add(AudioCodecFormat.OPUS)
+        }
 
         // Storage detection
         var availableStorageBytes = 0L
@@ -165,8 +197,7 @@ object DeviceDetector {
             totalStorageBytes = statFs.blockCountLong * statFs.blockSizeLong
         } catch (_: Exception) {}
 
-        // Recommend best stable configuration:
-        // 1080p, 60fps (or 30fps if 60 not supported), 20 Mbps bitrate
+        // Recommended best stable configuration
         val recommendedResolution = if (supportedResolutions.contains(VideoResolution.RES_1080P)) {
             VideoResolution.RES_1080P
         } else {
@@ -179,9 +210,12 @@ object DeviceDetector {
             else -> VideoFps.FPS_24
         }
 
+        val recommendedCodec = if (isHevcSupported) VideoCodecFormat.HEVC else VideoCodecFormat.H264
+
         val recommendedConfig = RecordingConfig(
             resolution = recommendedResolution,
             fps = recommendedFps,
+            videoCodec = recommendedCodec,
             bitrateMbps = if (recommendedResolution == VideoResolution.RES_4K) 40 else 20
         )
 
@@ -192,9 +226,14 @@ object DeviceDetector {
             maxSupportedFps = effectiveMaxFps,
             supportedFpsList = supportedFpsList,
             supportedResolutions = supportedResolutions,
+            supportedCodecs = supportedCodecs,
+            supportedAudioCodecs = supportedAudioCodecs,
             is4kSupported = is4kSupported,
             is120FpsSupported = is120FpsSupported,
+            is144FpsSupported = is144FpsSupported,
             isHevcSupported = isHevcSupported,
+            isAv1Supported = isAv1Supported,
+            isOpusSupported = isOpusSupported,
             isHdrSupported = isHdrSupported,
             availableStorageBytes = availableStorageBytes,
             totalStorageBytes = totalStorageBytes,

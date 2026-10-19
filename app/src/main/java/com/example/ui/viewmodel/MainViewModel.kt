@@ -59,6 +59,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _trimProgress = MutableStateFlow(0f)
     val trimProgress: StateFlow<Float> = _trimProgress.asStateFlow()
 
+    private val _isInterpolating = MutableStateFlow(false)
+    val isInterpolating: StateFlow<Boolean> = _isInterpolating.asStateFlow()
+
+    private val _interpolateProgress = MutableStateFlow(0f)
+    val interpolateProgress: StateFlow<Float> = _interpolateProgress.asStateFlow()
+
+    private val _interpolateStatusText = MutableStateFlow("Synthesizing Optical-Flow Motion Vectors...")
+    val interpolateStatusText: StateFlow<String> = _interpolateStatusText.asStateFlow()
+
     fun updateConfig(config: RecordingConfig) {
         repository.updateConfig(config)
     }
@@ -250,6 +259,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 onFinished(false, null)
             }
+        }
+    }
+
+    fun interpolateRecordingOpticalFlow(
+        item: RecordingItem,
+        multiplier: Int = 2,
+        onFinished: (Boolean, RecordingItem?) -> Unit
+    ) {
+        viewModelScope.launch {
+            _isInterpolating.value = true
+            _interpolateProgress.value = 0f
+            _interpolateStatusText.value = "Analyzing Optical-Flow Motion Vectors..."
+
+            val newItem = repository.interpolateRecordingOpticalFlow(
+                item = item,
+                multiplier = multiplier,
+                onProgress = { progress, status ->
+                    _interpolateProgress.value = progress
+                    _interpolateStatusText.value = status
+                }
+            )
+
+            _isInterpolating.value = false
+            onFinished(newItem != null, newItem)
         }
     }
 }

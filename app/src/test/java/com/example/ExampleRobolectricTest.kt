@@ -87,7 +87,7 @@ class ExampleRobolectricTest {
             audioSource = AudioSourceOption.MICROPHONE,
             orientation = VideoOrientation.AUTO
         )
-        assertEquals("1080p • 60 FPS • 20 Mbps", config.summaryString)
+        assertEquals("1080p • Universal • 60 FPS • 20 Mbps", config.summaryString)
         assertEquals("Microphone", config.audioSource.label)
     }
 }

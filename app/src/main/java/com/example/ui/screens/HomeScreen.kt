@@ -428,7 +428,7 @@ private fun HeroRecordingCard(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${config.resolution.label} • ${config.aspectRatio.label} • ${config.fps.fps} FPS • ${config.audioSource.label}",
+                    text = "${config.resolution.label} • ${config.videoCodec.subLabel} • ${config.fps.fps} FPS • ${config.audioCodec.label}${if (config.opticalFlowMode != com.example.data.model.OpticalFlowMode.OFF) " • 🌊 Motion Smooth" else ""}",
                     fontSize = if (isCompact) 11.5.sp else 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -441,7 +441,7 @@ private fun HeroRecordingCard(
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = "Lossless capture with floating controls & auto-gallery sync",
+                    text = "Studio ${config.videoCodec.subLabel} • ${config.fps.fps}FPS • ${config.audioCodec.label} with optical-flow smoothing",
                     fontSize = if (isCompact) 11.5.sp else 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -574,8 +574,8 @@ private fun ConfigBadgesRow(config: RecordingConfig, onBadgeClick: () -> Unit) {
         BadgeItem(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.AspectRatio,
-            title = config.aspectRatio.label,
-            sub = "Ratio"
+            title = config.videoCodec.subLabel,
+            sub = "Codec"
         )
         BadgeItem(
             modifier = Modifier.weight(1f),
@@ -586,14 +586,14 @@ private fun ConfigBadgesRow(config: RecordingConfig, onBadgeClick: () -> Unit) {
         BadgeItem(
             modifier = Modifier.weight(1f),
             icon = Icons.Outlined.GraphicEq,
-            title = config.audioSource.label,
+            title = config.audioCodec.label,
             sub = "Audio"
         )
         BadgeItem(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.ScreenRotation,
-            title = config.orientation.label,
-            sub = "Orient"
+            title = if (config.opticalFlowMode != com.example.data.model.OpticalFlowMode.OFF) "Flow 🌊" else config.orientation.label,
+            sub = if (config.opticalFlowMode != com.example.data.model.OpticalFlowMode.OFF) "Motion" else "Orient"
         )
     }
 }

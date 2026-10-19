@@ -1,5 +1,7 @@
 package com.example.data.model
 
+import android.os.Build
+
 enum class VideoResolution(val label: String, val subLabel: String, val width: Int, val height: Int) {
     RES_DEVICE("Device", "Native", 0, 0),
     RES_720P("720p", "HD", 1280, 720),
@@ -105,7 +107,67 @@ enum class VideoFps(val fps: Int, val subLabel: String) {
     FPS_30(30, "Standard"),
     FPS_60(60, "Smooth"),
     FPS_90(90, "High"),
-    FPS_120(120, "Ultra")
+    FPS_120(120, "Ultra"),
+    FPS_144(144, "Extreme")
+}
+
+enum class VideoCodecFormat(
+    val label: String,
+    val subLabel: String,
+    val mimeType: String,
+    val encoderConstant: Int,
+    val description: String
+) {
+    H264("H.264 / AVC", "Universal", "video/avc", 2 /* MediaRecorder.VideoEncoder.H264 */, "Works seamlessly across all social apps, editing suites & players"),
+    HEVC("H.265 / HEVC", "Studio Detail", "video/hevc", 5 /* MediaRecorder.VideoEncoder.HEVC */, "50% more efficient compression, pristine sharp textures at lower file size"),
+    AV1("AV1 Next-Gen", "Ultra Efficient", "video/av01", -1, "Next-generation royalty-free open codec for maximum fidelity (where HW supported)"),
+    PRO_RES_MASTER("Master AVC", "Intra Profile", "video/avc", 2, "High-bitrate studio master profile for video editing and color grading")
+}
+
+enum class AudioCodecFormat(
+    val label: String,
+    val subLabel: String,
+    val encoderConstant: Int,
+    val description: String
+) {
+    AAC_LC("AAC-LC", "Studio Stereo", 3 /* MediaRecorder.AudioEncoder.AAC */, "Clean high-fidelity stereo capture across all devices"),
+    AAC_HE("HE-AAC v2", "High Efficiency", 4 /* MediaRecorder.AudioEncoder.HE_AAC */, "Spectral band replication for crystal clear acoustic high frequencies"),
+    AAC_ELD("AAC-ELD", "Enhanced Low-Delay", 5 /* MediaRecorder.AudioEncoder.AAC_ELD */, "Broadcast-grade ultra low-latency audio capture"),
+    OPUS("OPUS Studio", "Spatial Clarity", 7 /* MediaRecorder.AudioEncoder.OPUS */, "Exceptional voice clarity and noise isolation (Android 10+)")
+}
+
+enum class OpticalFlowMode(
+    val label: String,
+    val subLabel: String,
+    val description: String
+) {
+    OFF("Disabled", "Standard", "Direct camera & screen capture timestamps"),
+    REALTIME_SMOOTHING("Active Smooth", "Motion Vector", "Smooths fast gaming scrolls and screen jitter during recording"),
+    POST_INTERPOLATE_2X("AI Frame Doubler", "60➔120 FPS", "Temporal bidirectional optical-flow frame interpolation for 2x fluid playback")
+}
+
+enum class CompressionRateControl(
+    val label: String,
+    val subLabel: String,
+    val description: String
+) {
+    VBR("VBR", "Motion Adaptive", "Smart variable bitrate adapts to screen complexity and saves space"),
+    CBR("CBR", "Zero Jitter", "Constant bitrate stream avoids buffer drops in fast action"),
+    CQ("CQ Master", "Visually Lossless", "Maintains consistent visual quality and sharp text lines")
+}
+
+enum class DeblockingFilter(val label: String, val description: String) {
+    OFF("None", "Raw encoder output"),
+    SUBTLE("Subtle Smooth", "Reduces micro-blocking around text and UI borders"),
+    CINEMATIC("Cinematic Smooth", "Softens gradient banding and compression artifacts")
+}
+
+enum class RecordingVisualEffect(val label: String, val iconEmoji: String, val description: String) {
+    NATURAL("Natural", "✨", "Pristine untouched screen pixels"),
+    VIVID_HDR("Vivid HDR", "🌈", "Enhanced color saturation and dynamic contrast"),
+    STUDIO_WARM("Studio Warm", "🎬", "Soft golden warmth for tutorials and presentations"),
+    CYBERPUNK("Cyber Neon", "⚡", "Vibrant electric tones for tech and gaming"),
+    SMOOTH_VIGNETTE("Soft Spotlight", "🎯", "Subtle peripheral gradient focusing on center content")
 }
 
 enum class AudioSourceOption(val label: String, val description: String) {
@@ -197,9 +259,16 @@ data class RecordingConfig(
     val aspectRatio: VideoAspectRatio = VideoAspectRatio.MATCH_DEVICE,
     val fps: VideoFps = VideoFps.FPS_60,
     val bitrateMbps: Int = 20, // 1 to 100 Mbps
+    val videoCodec: VideoCodecFormat = VideoCodecFormat.H264,
+    val audioCodec: AudioCodecFormat = AudioCodecFormat.AAC_LC,
+    val opticalFlowMode: OpticalFlowMode = OpticalFlowMode.OFF,
+    val rateControl: CompressionRateControl = CompressionRateControl.VBR,
+    val deblockingFilter: DeblockingFilter = DeblockingFilter.SUBTLE,
+    val keyframeIntervalSeconds: Float = 1.0f, // 0.5f, 1.0f, 2.0f
+    val visualEffect: RecordingVisualEffect = RecordingVisualEffect.NATURAL,
     val audioSource: AudioSourceOption = AudioSourceOption.MICROPHONE,
-    val audioSampleRate: Int = 44100, // 44100 or 48000 Hz
-    val audioBitrateKbps: Int = 128, // 128, 192, 256
+    val audioSampleRate: Int = 44100, // 44100, 48000, 96000 Hz
+    val audioBitrateKbps: Int = 192, // 128, 192, 256, 320
     val orientation: VideoOrientation = VideoOrientation.AUTO,
     val countdownSeconds: Int = 3, // 0 (Off), 3, 5, 10
     val showTouches: Boolean = false,
@@ -215,7 +284,7 @@ data class RecordingConfig(
     val userAvatarEmoji: String = "🎬"
 ) {
     val summaryString: String
-        get() = "${resolution.label} • ${aspectRatio.label} • ${fps.fps} FPS • ${bitrateMbps} Mbps"
+        get() = "${resolution.label} • ${videoCodec.subLabel} • ${fps.fps} FPS • ${bitrateMbps} Mbps"
 }
 
 data class DeviceCapability(
@@ -226,9 +295,14 @@ data class DeviceCapability(
     val supportedFpsList: List<VideoFps> = listOf(VideoFps.FPS_24, VideoFps.FPS_30, VideoFps.FPS_60),
     val supportedResolutions: List<VideoResolution> = listOf(VideoResolution.RES_DEVICE, VideoResolution.RES_720P, VideoResolution.RES_1080P),
     val supportedAspectRatios: List<VideoAspectRatio> = VideoAspectRatio.entries,
+    val supportedCodecs: List<VideoCodecFormat> = listOf(VideoCodecFormat.H264, VideoCodecFormat.HEVC, VideoCodecFormat.PRO_RES_MASTER),
+    val supportedAudioCodecs: List<AudioCodecFormat> = listOf(AudioCodecFormat.AAC_LC, AudioCodecFormat.AAC_HE, AudioCodecFormat.AAC_ELD),
     val is4kSupported: Boolean = false,
     val is120FpsSupported: Boolean = false,
+    val is144FpsSupported: Boolean = false,
     val isHevcSupported: Boolean = true,
+    val isAv1Supported: Boolean = false,
+    val isOpusSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
     val isHdrSupported: Boolean = false,
     val availableStorageBytes: Long = 0L,
     val totalStorageBytes: Long = 0L,

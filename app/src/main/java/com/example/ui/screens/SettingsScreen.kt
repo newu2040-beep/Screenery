@@ -79,11 +79,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AppThemeMode
+import com.example.data.model.AudioCodecFormat
 import com.example.data.model.AudioSourceOption
+import com.example.data.model.CompressionRateControl
+import com.example.data.model.DeblockingFilter
 import com.example.data.model.DeviceCapability
+import com.example.data.model.OpticalFlowMode
 import com.example.data.model.PastelTheme
 import com.example.data.model.RecordingConfig
+import com.example.data.model.RecordingVisualEffect
 import com.example.data.model.VideoAspectRatio
+import com.example.data.model.VideoCodecFormat
 import com.example.data.model.VideoFps
 import com.example.data.model.VideoOrientation
 import com.example.data.model.VideoResolution
@@ -532,6 +538,111 @@ fun SettingsScreen(
                 }
             }
 
+            // High-Quality Video Formats & Codecs
+            item {
+                SectionHeader(title = "High-Quality Video Format & Codec")
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    VideoCodecFormat.entries.forEach { codec ->
+                        val isSelected = localConfig.videoCodec == codec
+                        val isSupported = deviceCapability.supportedCodecs.contains(codec) || codec == VideoCodecFormat.H264
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable(enabled = isSupported) {
+                                    val updated = localConfig.copy(videoCodec = codec)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                                .testTag("codec_${codec.name}"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                            else MaterialTheme.colorScheme.surfaceVariant
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = when (codec) {
+                                            VideoCodecFormat.H264 -> "264"
+                                            VideoCodecFormat.HEVC -> "265"
+                                            VideoCodecFormat.AV1 -> "AV1"
+                                            VideoCodecFormat.PRO_RES_MASTER -> "PRO"
+                                        },
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = codec.label,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(
+                                                    if (isSelected) MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.surfaceVariant
+                                                )
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = codec.subLabel,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = codec.description,
+                                        fontSize = 11.5.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Resolution Selection
             item {
                 SectionHeader(title = "Resolution")
@@ -565,34 +676,304 @@ fun SettingsScreen(
                 }
             }
 
-            // Frame Rate (FPS)
+            // Frame Rate (FPS) with High Refresh Rate Gaming Support
             item {
                 SectionHeader(title = "Frame Rate (FPS)")
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
+                LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf(
-                        VideoFps.FPS_30,
-                        VideoFps.FPS_60,
-                        VideoFps.FPS_90,
-                        VideoFps.FPS_120
-                    ).forEach { fps ->
+                    items(VideoFps.entries) { fps ->
                         val isSupported = deviceCapability.supportedFpsList.contains(fps)
                         val isSelected = localConfig.fps == fps
-                        PillSelector(
-                            modifier = Modifier.weight(1f),
-                            title = "${fps.fps} FPS",
-                            subtitle = fps.subLabel,
-                            selected = isSelected,
-                            enabled = isSupported,
-                            onClick = {
-                                val updated = localConfig.copy(fps = fps)
-                                localConfig = updated
-                                onConfigChanged(updated)
+                        Card(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable(enabled = isSupported) {
+                                    val updated = localConfig.copy(fps = fps)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                                .testTag("fps_${fps.fps}"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else if (!isSupported) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else Color.Transparent
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "${fps.fps} FPS",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                                    else if (!isSupported) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = fps.subLabel,
+                                    fontSize = 10.5.sp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
+                        }
+                    }
+                }
+            }
+
+            // Optical-Flow Motion Interpolation Section
+            item {
+                SectionHeader(title = "Optical-Flow Motion Interpolation")
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OpticalFlowMode.entries.forEach { mode ->
+                        val isSelected = localConfig.opticalFlowMode == mode
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    val updated = localConfig.copy(opticalFlowMode = mode)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                                .testTag("optical_flow_${mode.name}"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                            else MaterialTheme.colorScheme.surfaceVariant
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = when (mode) {
+                                            OpticalFlowMode.OFF -> "⏸"
+                                            OpticalFlowMode.REALTIME_SMOOTHING -> "🌊"
+                                            OpticalFlowMode.POST_INTERPOLATE_2X -> "⚡"
+                                        },
+                                        fontSize = 18.sp
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = mode.label,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "• ${mode.subLabel}",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = mode.description,
+                                        fontSize = 11.5.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Smoother Compression Settings (Rate Control, Deblocking & GOP)
+            item {
+                SectionHeader(title = "Compression Smoothness & Rate Control")
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Encoder Rate Control Mode",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CompressionRateControl.entries.forEach { rc ->
+                                val isSelected = localConfig.rateControl == rc
+                                PillSelector(
+                                    modifier = Modifier.weight(1f),
+                                    title = rc.label,
+                                    subtitle = rc.subLabel,
+                                    selected = isSelected,
+                                    enabled = true,
+                                    onClick = {
+                                        val updated = localConfig.copy(rateControl = rc)
+                                        localConfig = updated
+                                        onConfigChanged(updated)
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = "Deblocking & Gradient Smoothing Filter",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            DeblockingFilter.entries.forEach { df ->
+                                val isSelected = localConfig.deblockingFilter == df
+                                PillSelector(
+                                    modifier = Modifier.weight(1f),
+                                    title = df.label,
+                                    subtitle = when (df) {
+                                        DeblockingFilter.OFF -> "Raw"
+                                        DeblockingFilter.SUBTLE -> "Clean"
+                                        DeblockingFilter.CINEMATIC -> "Film"
+                                    },
+                                    selected = isSelected,
+                                    enabled = true,
+                                    onClick = {
+                                        val updated = localConfig.copy(deblockingFilter = df)
+                                        localConfig = updated
+                                        onConfigChanged(updated)
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = "Keyframe (GOP) Interval",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(
+                                Pair(0.5f, "0.5s (Fast Seek)"),
+                                Pair(1.0f, "1.0s (Balanced)"),
+                                Pair(2.0f, "2.0s (Compact)")
+                            ).forEach { (gop, label) ->
+                                val isSelected = localConfig.keyframeIntervalSeconds == gop
+                                PillSelector(
+                                    modifier = Modifier.weight(1f),
+                                    title = "${gop}s",
+                                    subtitle = if (gop == 1.0f) "Recommended" else if (gop == 0.5f) "Fast Sync" else "Compact",
+                                    selected = isSelected,
+                                    enabled = true,
+                                    onClick = {
+                                        val updated = localConfig.copy(keyframeIntervalSeconds = gop)
+                                        localConfig = updated
+                                        onConfigChanged(updated)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Visual Recording Effects
+            item {
+                SectionHeader(title = "Visual Recording Effects & Color")
+                Spacer(modifier = Modifier.height(10.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(RecordingVisualEffect.entries) { effect ->
+                        val isSelected = localConfig.visualEffect == effect
+                        Card(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    val updated = localConfig.copy(visualEffect = effect)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                                .testTag("effect_${effect.name}"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                                    .widthIn(min = 100.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(text = effect.iconEmoji, fontSize = 24.sp)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = effect.label,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -819,7 +1200,33 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = "Audio Encoding Quality",
+                                text = "High-Quality Audio Format & Codec",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(AudioCodecFormat.entries) { aCodec ->
+                                    val isSelected = localConfig.audioCodec == aCodec
+                                    val isSupported = deviceCapability.supportedAudioCodecs.contains(aCodec)
+                                    PillSelector(
+                                        title = aCodec.label,
+                                        subtitle = aCodec.subLabel,
+                                        selected = isSelected,
+                                        enabled = isSupported,
+                                        onClick = {
+                                            val updated = localConfig.copy(audioCodec = aCodec)
+                                            localConfig = updated
+                                            onConfigChanged(updated)
+                                        }
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "Audio Sampling Rate",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -831,7 +1238,8 @@ fun SettingsScreen(
                             ) {
                                 listOf(
                                     Pair(44100, "44.1 kHz (CD)"),
-                                    Pair(48000, "48.0 kHz (HD)")
+                                    Pair(48000, "48.0 kHz (HD)"),
+                                    Pair(96000, "96.0 kHz (Studio)")
                                 ).forEach { (sr, label) ->
                                     val isSelected = localConfig.audioSampleRate == sr
                                     PillSelector(
@@ -848,21 +1256,29 @@ fun SettingsScreen(
                                     )
                                 }
                             }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "Audio Bitrate",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 listOf(
                                     Pair(128, "128 kbps"),
                                     Pair(192, "192 kbps"),
-                                    Pair(256, "256 kbps (Studio)")
+                                    Pair(256, "256 kbps"),
+                                    Pair(320, "320 kbps")
                                 ).forEach { (br, label) ->
                                     val isSelected = localConfig.audioBitrateKbps == br
                                     PillSelector(
                                         modifier = Modifier.weight(1f),
                                         title = "$br kbps",
-                                        subtitle = if (br >= 192) "High Res" else "Standard",
+                                        subtitle = if (br >= 256) "Master" else if (br >= 192) "High Res" else "Standard",
                                         selected = isSelected,
                                         enabled = true,
                                         onClick = {

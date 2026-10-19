@@ -5,17 +5,24 @@ import android.content.SharedPreferences
 import com.example.data.db.RecordingDao
 import com.example.data.db.RecordingDatabase
 import com.example.data.model.AppThemeMode
+import com.example.data.model.AudioCodecFormat
 import com.example.data.model.AudioSourceOption
+import com.example.data.model.CompressionRateControl
+import com.example.data.model.DeblockingFilter
 import com.example.data.model.DeviceCapability
+import com.example.data.model.OpticalFlowMode
 import com.example.data.model.PastelTheme
 import com.example.data.model.RecordingConfig
 import com.example.data.model.RecordingItem
+import com.example.data.model.RecordingVisualEffect
 import com.example.data.model.VideoAspectRatio
+import com.example.data.model.VideoCodecFormat
 import com.example.data.model.VideoFps
 import com.example.data.model.VideoOrientation
 import com.example.data.model.VideoResolution
 import com.example.engine.DeviceDetector
 import com.example.engine.GalleryHelper
+import com.example.engine.OpticalFlowInterpolator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -102,6 +109,44 @@ class RecordingRepository(private val context: Context) {
         }
     }
 
+    suspend fun interpolateRecordingOpticalFlow(
+        item: RecordingItem,
+        multiplier: Int = 2,
+        onProgress: (Float, String) -> Unit = { _, _ -> }
+    ): RecordingItem? = withContext(Dispatchers.IO) {
+        val srcFile = File(item.filePath)
+        if (!srcFile.exists()) return@withContext null
+
+        val parentDir = srcFile.parentFile ?: context.filesDir
+        val baseName = srcFile.nameWithoutExtension
+        val targetFps = (item.fps * multiplier).coerceIn(48, 144)
+        val dstFile = File(parentDir, "${baseName}_optical_flow_${targetFps}fps.mp4")
+
+        val success = OpticalFlowInterpolator.interpolateVideo(
+            srcPath = srcFile.absolutePath,
+            dstPath = dstFile.absolutePath,
+            multiplier = multiplier,
+            onProgress = onProgress
+        )
+
+        if (success && dstFile.exists() && dstFile.length() > 0) {
+            val newTitle = "${item.title} (Optical-Flow ${targetFps}FPS)"
+            saveCompletedRecording(
+                filePath = dstFile.absolutePath,
+                durationMs = item.durationMs,
+                width = item.width,
+                height = item.height,
+                fps = targetFps,
+                bitrateMbps = item.bitrateMbps,
+                codec = "${item.codec} • Optical-Flow ${targetFps}FPS",
+                audioSource = item.audioSource,
+                customTitle = newTitle
+            )
+        } else {
+            null
+        }
+    }
+
     suspend fun renameRecording(id: Long, newTitle: String) {
         withContext(Dispatchers.IO) {
             dao.renameRecording(id, newTitle)
@@ -131,9 +176,16 @@ class RecordingRepository(private val context: Context) {
         val aspectOrdinal = prefs.getInt("cfg_aspect_ratio", VideoAspectRatio.MATCH_DEVICE.ordinal)
         val fpsOrdinal = prefs.getInt("cfg_fps", VideoFps.FPS_60.ordinal)
         val bitrate = prefs.getInt("cfg_bitrate", 20)
+        val videoCodecOrdinal = prefs.getInt("cfg_video_codec", VideoCodecFormat.H264.ordinal)
+        val audioCodecOrdinal = prefs.getInt("cfg_audio_codec", AudioCodecFormat.AAC_LC.ordinal)
+        val opticalFlowOrdinal = prefs.getInt("cfg_optical_flow", OpticalFlowMode.OFF.ordinal)
+        val rateControlOrdinal = prefs.getInt("cfg_rate_control", CompressionRateControl.VBR.ordinal)
+        val deblockOrdinal = prefs.getInt("cfg_deblock", DeblockingFilter.SUBTLE.ordinal)
+        val keyframe = prefs.getFloat("cfg_keyframe", 1.0f)
+        val visualEffectOrdinal = prefs.getInt("cfg_visual_effect", RecordingVisualEffect.NATURAL.ordinal)
         val audioOrdinal = prefs.getInt("cfg_audio", AudioSourceOption.MICROPHONE.ordinal)
         val audioSampleRate = prefs.getInt("cfg_audio_sample_rate", 44100)
-        val audioBitrate = prefs.getInt("cfg_audio_bitrate", 128)
+        val audioBitrate = prefs.getInt("cfg_audio_bitrate", 192)
         val orientOrdinal = prefs.getInt("cfg_orient", VideoOrientation.AUTO.ordinal)
         val countdown = prefs.getInt("cfg_countdown", 3)
         val showTouches = prefs.getBoolean("cfg_touches", false)
@@ -151,6 +203,12 @@ class RecordingRepository(private val context: Context) {
         val resolution = VideoResolution.entries.getOrElse(resOrdinal) { VideoResolution.RES_1080P }
         val aspectRatio = VideoAspectRatio.entries.getOrElse(aspectOrdinal) { VideoAspectRatio.MATCH_DEVICE }
         val fps = VideoFps.entries.getOrElse(fpsOrdinal) { VideoFps.FPS_60 }
+        val videoCodec = VideoCodecFormat.entries.getOrElse(videoCodecOrdinal) { VideoCodecFormat.H264 }
+        val audioCodec = AudioCodecFormat.entries.getOrElse(audioCodecOrdinal) { AudioCodecFormat.AAC_LC }
+        val opticalFlow = OpticalFlowMode.entries.getOrElse(opticalFlowOrdinal) { OpticalFlowMode.OFF }
+        val rateControl = CompressionRateControl.entries.getOrElse(rateControlOrdinal) { CompressionRateControl.VBR }
+        val deblock = DeblockingFilter.entries.getOrElse(deblockOrdinal) { DeblockingFilter.SUBTLE }
+        val visualEffect = RecordingVisualEffect.entries.getOrElse(visualEffectOrdinal) { RecordingVisualEffect.NATURAL }
         val audio = AudioSourceOption.entries.getOrElse(audioOrdinal) { AudioSourceOption.MICROPHONE }
         val orient = VideoOrientation.entries.getOrElse(orientOrdinal) { VideoOrientation.AUTO }
         val themeMode = AppThemeMode.entries.getOrElse(themeOrdinal) { AppThemeMode.SYSTEM }
@@ -161,6 +219,13 @@ class RecordingRepository(private val context: Context) {
             aspectRatio = aspectRatio,
             fps = fps,
             bitrateMbps = bitrate,
+            videoCodec = videoCodec,
+            audioCodec = audioCodec,
+            opticalFlowMode = opticalFlow,
+            rateControl = rateControl,
+            deblockingFilter = deblock,
+            keyframeIntervalSeconds = keyframe,
+            visualEffect = visualEffect,
             audioSource = audio,
             audioSampleRate = audioSampleRate,
             audioBitrateKbps = audioBitrate,
@@ -186,6 +251,13 @@ class RecordingRepository(private val context: Context) {
             .putInt("cfg_aspect_ratio", config.aspectRatio.ordinal)
             .putInt("cfg_fps", config.fps.ordinal)
             .putInt("cfg_bitrate", config.bitrateMbps)
+            .putInt("cfg_video_codec", config.videoCodec.ordinal)
+            .putInt("cfg_audio_codec", config.audioCodec.ordinal)
+            .putInt("cfg_optical_flow", config.opticalFlowMode.ordinal)
+            .putInt("cfg_rate_control", config.rateControl.ordinal)
+            .putInt("cfg_deblock", config.deblockingFilter.ordinal)
+            .putFloat("cfg_keyframe", config.keyframeIntervalSeconds)
+            .putInt("cfg_visual_effect", config.visualEffect.ordinal)
             .putInt("cfg_audio", config.audioSource.ordinal)
             .putInt("cfg_audio_sample_rate", config.audioSampleRate)
             .putInt("cfg_audio_bitrate", config.audioBitrateKbps)

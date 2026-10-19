@@ -269,11 +269,36 @@ class ScreenRecordingService : Service() {
 
                 // Dimensions & Bitrate
                 setVideoSize(recordingWidth, recordingHeight)
-                setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+                try {
+                    val encoder = when (currentConfig.videoCodec) {
+                        com.example.data.model.VideoCodecFormat.HEVC -> MediaRecorder.VideoEncoder.HEVC
+                        com.example.data.model.VideoCodecFormat.H264, com.example.data.model.VideoCodecFormat.PRO_RES_MASTER -> MediaRecorder.VideoEncoder.H264
+                        com.example.data.model.VideoCodecFormat.AV1 -> {
+                            // MediaRecorder supports AVC/HEVC surfaces reliably across all OEMs
+                            MediaRecorder.VideoEncoder.H264
+                        }
+                    }
+                    setVideoEncoder(encoder)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to set requested video encoder, falling back to H.264", e)
+                    try { setVideoEncoder(MediaRecorder.VideoEncoder.H264) } catch (_: Exception) {}
+                }
 
                 if (audioConfigured) {
                     try {
-                        setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                        val aEncoder = when (currentConfig.audioCodec) {
+                            com.example.data.model.AudioCodecFormat.AAC_LC -> MediaRecorder.AudioEncoder.AAC
+                            com.example.data.model.AudioCodecFormat.AAC_HE -> MediaRecorder.AudioEncoder.HE_AAC
+                            com.example.data.model.AudioCodecFormat.AAC_ELD -> MediaRecorder.AudioEncoder.AAC_ELD
+                            com.example.data.model.AudioCodecFormat.OPUS -> {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    MediaRecorder.AudioEncoder.OPUS
+                                } else {
+                                    MediaRecorder.AudioEncoder.AAC
+                                }
+                            }
+                        }
+                        setAudioEncoder(aEncoder)
                         setAudioEncodingBitRate(currentConfig.audioBitrateKbps * 1000)
                         setAudioSamplingRate(currentConfig.audioSampleRate)
                         setAudioChannels(2)
@@ -281,6 +306,9 @@ class ScreenRecordingService : Service() {
                         Log.w(TAG, "Failed setting advanced audio encoder settings, falling back to standard AAC", e)
                         try {
                             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                            setAudioEncodingBitRate(192000)
+                            setAudioSamplingRate(44100)
+                            setAudioChannels(2)
                         } catch (_: Exception) {}
                     }
                 }
@@ -442,7 +470,7 @@ class ScreenRecordingService : Service() {
                     height = recordingHeight,
                     fps = currentConfig.fps.fps,
                     bitrateMbps = currentConfig.bitrateMbps,
-                    codec = "H.264 (AVC)",
+                    codec = "${currentConfig.videoCodec.label} • ${currentConfig.audioCodec.label}",
                     audioSource = currentConfig.audioSource.label
                 )
                 _recordingStatus.value = RecordingStatus(
