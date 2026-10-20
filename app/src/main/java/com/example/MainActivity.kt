@@ -47,6 +47,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,6 +66,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.data.model.AppThemeMode
 import com.example.data.model.AudioSourceOption
@@ -161,6 +172,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route ?: "home"
+            val showBottomNav = currentRoute in listOf("home", "recordings", "settings")
+
             MyApplicationTheme(
                 themeMode = currentConfig.themeMode,
                 pastelTheme = currentConfig.pastelTheme,
@@ -168,6 +183,95 @@ class MainActivity : ComponentActivity() {
             ) {
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },
+                    bottomBar = {
+                        if (showBottomNav) {
+                            NavigationBar(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                tonalElevation = 3.dp,
+                                modifier = Modifier
+                                    .navigationBarsPadding()
+                                    .testTag("app_navigation_bar")
+                            ) {
+                                NavigationBarItem(
+                                    selected = currentRoute == "home",
+                                    onClick = {
+                                        if (currentRoute != "home") {
+                                            navController.navigate("home") {
+                                                popUpTo("home") { inclusive = true }
+                                            }
+                                        }
+                                    },
+                                    icon = {
+                                        Icon(Icons.Default.Videocam, contentDescription = "Capture")
+                                    },
+                                    label = {
+                                        Text(
+                                            text = "Capture",
+                                            fontWeight = if (currentRoute == "home") FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_capture")
+                                )
+                                NavigationBarItem(
+                                    selected = currentRoute == "recordings",
+                                    onClick = {
+                                        if (currentRoute != "recordings") {
+                                            navController.navigate("recordings")
+                                        }
+                                    },
+                                    icon = {
+                                        Icon(Icons.Default.VideoLibrary, contentDescription = "Recordings")
+                                    },
+                                    label = {
+                                        Text(
+                                            text = "Recordings",
+                                            fontWeight = if (currentRoute == "recordings") FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_recordings")
+                                )
+                                NavigationBarItem(
+                                    selected = currentRoute == "settings",
+                                    onClick = {
+                                        if (currentRoute != "settings") {
+                                            navController.navigate("settings")
+                                        }
+                                    },
+                                    icon = {
+                                        Icon(Icons.Default.Tune, contentDescription = "Settings")
+                                    },
+                                    label = {
+                                        Text(
+                                            text = "Studio Setup",
+                                            fontWeight = if (currentRoute == "settings") FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_settings")
+                                )
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag("app_scaffold")
@@ -243,6 +347,18 @@ class MainActivity : ComponentActivity() {
                                     onDetailsRecording = { item ->
                                         activePlayingItem = item
                                         navController.navigate("player")
+                                    },
+                                    onThemeSelect = { theme ->
+                                        viewModel.updatePastelTheme(theme)
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("Applied theme: ${theme.displayName} (${theme.category})")
+                                        }
+                                    },
+                                    onApplyPreset = { presetConfig ->
+                                        viewModel.updateConfig(presetConfig)
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("Preset Applied: ${presetConfig.resolution.label} • ${presetConfig.fps.fps}FPS • ${presetConfig.videoCodec.subLabel}")
+                                        }
                                     }
                                 )
                             }

@@ -191,6 +191,7 @@ enum class AppThemeMode(val label: String) {
 
 enum class PastelTheme(
     val displayName: String,
+    val category: String,
     val primaryColor: Long,
     val secondaryColor: Long,
     val lightBgColor: Long,
@@ -200,6 +201,7 @@ enum class PastelTheme(
 ) {
     LAVENDER(
         displayName = "Lavender Dream",
+        category = "Pastel",
         primaryColor = 0xFF6366F1,
         secondaryColor = 0xFF8B5CF6,
         lightBgColor = 0xFFF8F9FE,
@@ -209,6 +211,7 @@ enum class PastelTheme(
     ),
     MINT_SAGE(
         displayName = "Mint Sage",
+        category = "Pastel",
         primaryColor = 0xFF10B981,
         secondaryColor = 0xFF14B8A6,
         lightBgColor = 0xFFF4FDF9,
@@ -218,6 +221,7 @@ enum class PastelTheme(
     ),
     PEACH_ROSE(
         displayName = "Peach Rose",
+        category = "Pastel",
         primaryColor = 0xFFF43F5E,
         secondaryColor = 0xFFFB7185,
         lightBgColor = 0xFFFFF8F8,
@@ -227,6 +231,7 @@ enum class PastelTheme(
     ),
     SKY_BLUE(
         displayName = "Sky Breeze",
+        category = "Pastel",
         primaryColor = 0xFF0284C7,
         secondaryColor = 0xFF38BDF8,
         lightBgColor = 0xFFF4F9FF,
@@ -236,6 +241,7 @@ enum class PastelTheme(
     ),
     COTTON_CANDY(
         displayName = "Cotton Candy",
+        category = "Pastel",
         primaryColor = 0xFFC026D3,
         secondaryColor = 0xFFE879F9,
         lightBgColor = 0xFFFDF7FF,
@@ -245,12 +251,73 @@ enum class PastelTheme(
     ),
     MATCHA_HONEY(
         displayName = "Matcha Honey",
+        category = "Pastel",
         primaryColor = 0xFFD97706,
         secondaryColor = 0xFFF59E0B,
         lightBgColor = 0xFFFFFDF5,
         lightContainerColor = 0xFFFEF3C7,
         darkPrimaryColor = 0xFFFBBF24,
         darkContainerColor = 0xFF78350F
+    ),
+    CYBER_NEON(
+        displayName = "Cyber Neon",
+        category = "Modern",
+        primaryColor = 0xFF8B5CF6,
+        secondaryColor = 0xFFEC4899,
+        lightBgColor = 0xFFFAF5FF,
+        lightContainerColor = 0xFFF3E8FF,
+        darkPrimaryColor = 0xFFA78BFA,
+        darkContainerColor = 0xFF2E1065
+    ),
+    MIDNIGHT_OLED(
+        displayName = "Midnight Noir",
+        category = "OLED",
+        primaryColor = 0xFF10B981,
+        secondaryColor = 0xFF06B6D4,
+        lightBgColor = 0xFFF8FAFC,
+        lightContainerColor = 0xFFF1F5F9,
+        darkPrimaryColor = 0xFF34D399,
+        darkContainerColor = 0xFF18181B
+    ),
+    NORDIC_ICE(
+        displayName = "Nordic Glacier",
+        category = "Modern",
+        primaryColor = 0xFF06B6D4,
+        secondaryColor = 0xFF0284C7,
+        lightBgColor = 0xFFF0FDFA,
+        lightContainerColor = 0xFFCCFBF1,
+        darkPrimaryColor = 0xFF22D3EE,
+        darkContainerColor = 0xFF164E63
+    ),
+    SUNSET_AURORA(
+        displayName = "Sunset Crimson",
+        category = "Vibrant",
+        primaryColor = 0xFFF97316,
+        secondaryColor = 0xFFE11D48,
+        lightBgColor = 0xFFFFF7ED,
+        lightContainerColor = 0xFFFFEDD5,
+        darkPrimaryColor = 0xFFFB923C,
+        darkContainerColor = 0xFF7C2D12
+    ),
+    EMERALD_MATRIX(
+        displayName = "Matrix Emerald",
+        category = "High-Tech",
+        primaryColor = 0xFF059669,
+        secondaryColor = 0xFF10B981,
+        lightBgColor = 0xFFF0FDF4,
+        lightContainerColor = 0xFFDCFCE7,
+        darkPrimaryColor = 0xFF34D399,
+        darkContainerColor = 0xFF064E3B
+    ),
+    SWISS_MINIMAL(
+        displayName = "Swiss Minimal",
+        category = "Minimal",
+        primaryColor = 0xFF18181B,
+        secondaryColor = 0xFF52525B,
+        lightBgColor = 0xFFFAFAFA,
+        lightContainerColor = 0xFFF4F4F5,
+        darkPrimaryColor = 0xFFF4F4F5,
+        darkContainerColor = 0xFF27272A
     )
 }
 

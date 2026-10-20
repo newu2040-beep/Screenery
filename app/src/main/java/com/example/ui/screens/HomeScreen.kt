@@ -23,11 +23,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
@@ -37,16 +40,20 @@ import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -74,9 +81,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AppThemeMode
+import com.example.data.model.AudioCodecFormat
+import com.example.data.model.CompressionRateControl
 import com.example.data.model.DeviceCapability
+import com.example.data.model.OpticalFlowMode
+import com.example.data.model.PastelTheme
 import com.example.data.model.RecordingConfig
 import com.example.data.model.RecordingItem
+import com.example.data.model.VideoAspectRatio
+import com.example.data.model.VideoCodecFormat
+import com.example.data.model.VideoFps
+import com.example.data.model.VideoResolution
 import com.example.service.RecordingStatus
 import com.example.ui.theme.LocalCompactMode
 import com.example.ui.theme.LocalExpressiveDimens
@@ -105,10 +120,13 @@ fun HomeScreen(
     onShareRecording: (RecordingItem) -> Unit,
     onDeleteRecording: (RecordingItem) -> Unit,
     onDetailsRecording: (RecordingItem) -> Unit,
+    onThemeSelect: (PastelTheme) -> Unit = {},
+    onApplyPreset: (RecordingConfig) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val dimens = LocalExpressiveDimens.current
     val isCompact = LocalCompactMode.current
+    var showThemeDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier
@@ -211,6 +229,32 @@ fun HomeScreen(
                         }
                     }
 
+                    // Quick Modern Themes Palette Button
+                    Box(
+                        modifier = Modifier
+                            .size(if (isCompact) 34.dp else 38.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { showThemeDialog = true }
+                            .testTag("theme_quick_palette_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = "Themes",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(2.dp)
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(Color(config.pastelTheme.primaryColor))
+                        )
+                    }
+
                     // Dark / Light quick switcher icon button
                     Box(
                         modifier = Modifier
@@ -244,6 +288,44 @@ fun HomeScreen(
                 onStartClick = onStartRecordingClick,
                 onPauseResumeClick = onPauseResumeClick,
                 onStopClick = onStopRecordingClick
+            )
+        }
+
+        // Pro Presets Quick Selector Strip
+        item {
+            Spacer(modifier = Modifier.height(dimens.sectionSpacing))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Bolt,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(if (isCompact) 15.dp else 18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Instant Pro Presets",
+                        fontSize = if (isCompact) 14.5.sp else 16.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                Text(
+                    text = "1-Tap Setup",
+                    fontSize = if (isCompact) 11.sp else 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 10.dp))
+            ProPresetsRow(
+                currentConfig = config,
+                deviceCapability = deviceCapability,
+                onApply = onApplyPreset
             )
         }
 
@@ -329,6 +411,17 @@ fun HomeScreen(
         item {
             Spacer(modifier = Modifier.height(if (isCompact) 20.dp else 32.dp))
         }
+    }
+
+    if (showThemeDialog) {
+        ModernThemeSelectorDialog(
+            currentTheme = config.pastelTheme,
+            onSelectTheme = { theme ->
+                onThemeSelect(theme)
+                showThemeDialog = false
+            },
+            onDismiss = { showThemeDialog = false }
+        )
     }
 }
 
@@ -426,7 +519,37 @@ private fun HeroRecordingCard(
                     letterSpacing = 1.sp,
                     modifier = Modifier.testTag("recording_timer_text")
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+
+                if (!isPaused) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.height(18.dp)
+                    ) {
+                        val barDelays = listOf(0, 100, 200, 300, 400)
+                        barDelays.forEach { d ->
+                            val barAnim by infiniteTransition.animateFloat(
+                                initialValue = 0.25f,
+                                targetValue = 1f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(durationMillis = 350 + d, delayMillis = d / 4),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "wave_bar_$d"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .width(3.dp)
+                                    .height((4 + 14 * barAnim).dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = "${config.resolution.label} • ${config.videoCodec.subLabel} • ${config.fps.fps} FPS • ${config.audioCodec.label}${if (config.opticalFlowMode != com.example.data.model.OpticalFlowMode.OFF) " • 🌊 Motion Smooth" else ""}",
                     fontSize = if (isCompact) 11.5.sp else 13.sp,
@@ -834,3 +957,336 @@ private fun RecentRecordingItemCard(
         }
     }
 }
+
+@Composable
+fun ProPresetsRow(
+    currentConfig: RecordingConfig,
+    deviceCapability: DeviceCapability,
+    onApply: (RecordingConfig) -> Unit
+) {
+    val isCompact = LocalCompactMode.current
+    val dimens = LocalExpressiveDimens.current
+
+    val gamingFps = when {
+        deviceCapability.is144FpsSupported -> VideoFps.FPS_144
+        deviceCapability.is120FpsSupported -> VideoFps.FPS_120
+        else -> VideoFps.FPS_60
+    }
+
+    val presets = listOf(
+        PresetItem(
+            id = "gaming",
+            title = "Gaming Pro",
+            subtitle = "${gamingFps.fps} FPS • HEVC",
+            badge = "Smooth 🌊",
+            icon = Icons.Default.SportsEsports,
+            config = currentConfig.copy(
+                fps = gamingFps,
+                resolution = VideoResolution.RES_1080P,
+                aspectRatio = VideoAspectRatio.MATCH_DEVICE,
+                bitrateMbps = 25,
+                videoCodec = VideoCodecFormat.HEVC,
+                opticalFlowMode = OpticalFlowMode.REALTIME_SMOOTHING
+            )
+        ),
+        PresetItem(
+            id = "social",
+            title = "Social 9:16",
+            subtitle = "Shorts • Reels",
+            badge = "Vertical",
+            icon = Icons.Default.Smartphone,
+            config = currentConfig.copy(
+                resolution = VideoResolution.RES_1080P,
+                aspectRatio = VideoAspectRatio.RATIO_9_16,
+                fps = VideoFps.FPS_60,
+                bitrateMbps = 20,
+                videoCodec = VideoCodecFormat.H264
+            )
+        ),
+        PresetItem(
+            id = "cinema",
+            title = "Cinema 4K",
+            subtitle = if (deviceCapability.is4kSupported) "4K UHD • Master" else "FHD • Master AVC",
+            badge = "Studio",
+            icon = Icons.Default.Movie,
+            config = currentConfig.copy(
+                resolution = if (deviceCapability.is4kSupported) VideoResolution.RES_4K else VideoResolution.RES_1080P,
+                aspectRatio = VideoAspectRatio.RATIO_16_9,
+                fps = VideoFps.FPS_30,
+                bitrateMbps = if (deviceCapability.is4kSupported) 40 else 24,
+                videoCodec = VideoCodecFormat.PRO_RES_MASTER
+            )
+        ),
+        PresetItem(
+            id = "low_latency",
+            title = "Fast Action",
+            subtitle = "CQ Master • ELD",
+            badge = "Zero Lag",
+            icon = Icons.Default.Bolt,
+            config = currentConfig.copy(
+                resolution = VideoResolution.RES_1080P,
+                fps = VideoFps.FPS_60,
+                bitrateMbps = 18,
+                audioCodec = AudioCodecFormat.AAC_ELD,
+                rateControl = CompressionRateControl.CQ
+            )
+        )
+    )
+
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(presets) { preset ->
+            Card(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(dimens.cornerRadiusMedium))
+                    .clickable { onApply(preset.config) }
+                    .testTag("preset_${preset.id}"),
+                shape = RoundedCornerShape(dimens.cornerRadiusMedium),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = if (isCompact) 10.dp else 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(if (isCompact) 36.dp else 42.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = preset.icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(if (isCompact) 20.dp else 24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = preset.title,
+                                fontSize = if (isCompact) 13.sp else 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    text = preset.badge,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = preset.subtitle,
+                            fontSize = if (isCompact) 10.5.sp else 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class PresetItem(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val badge: String,
+    val icon: ImageVector,
+    val config: RecordingConfig
+)
+
+@Composable
+fun ModernThemeSelectorDialog(
+    currentTheme: PastelTheme,
+    onSelectTheme: (PastelTheme) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val categories = listOf("All", "Modern", "OLED", "Pastel", "High-Tech", "Vibrant", "Minimal")
+    var selectedCategory by remember { mutableStateOf("All") }
+
+    val filteredThemes = remember(selectedCategory) {
+        if (selectedCategory == "All") {
+            PastelTheme.entries
+        } else {
+            PastelTheme.entries.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Palette,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Modern App Themes",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Select a modern design theme to instantly transform the app's palette and accents.",
+                    fontSize = 12.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Category Chips
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(categories) { cat ->
+                        val isCatSelected = selectedCategory == cat
+                        Surface(
+                            onClick = { selectedCategory = cat },
+                            shape = CircleShape,
+                            color = if (isCatSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.height(30.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(horizontal = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = cat,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isCatSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Theme Cards Grid/List
+                LazyColumn(
+                    modifier = Modifier.height(280.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredThemes) { theme ->
+                        val isSelected = currentTheme == theme
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable { onSelectTheme(theme) }
+                                .testTag("dialog_theme_${theme.name}"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (isSelected) 2.dp else 1.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy((-6).dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(theme.primaryColor))
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(theme.secondaryColor))
+                                            .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = theme.displayName,
+                                            fontSize = 13.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(
+                                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                                    else MaterialTheme.colorScheme.surfaceVariant
+                                                )
+                                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = theme.category,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+

@@ -69,7 +69,7 @@ fun createPastelLightColorScheme(pastelTheme: PastelTheme): ColorScheme {
 
     return lightColorScheme(
         primary = primary,
-        onPrimary = Color.White,
+        onPrimary = if (pastelTheme == PastelTheme.SWISS_MINIMAL) Color.White else Color.White,
         primaryContainer = container,
         onPrimaryContainer = primary,
         secondary = secondary,
@@ -78,20 +78,20 @@ fun createPastelLightColorScheme(pastelTheme: PastelTheme): ColorScheme {
         onSecondaryContainer = secondary,
         tertiary = secondary,
         onTertiary = Color.White,
-        tertiaryContainer = Color(0xFFF3E8FF),
-        onTertiaryContainer = Color(0xFF6B21A8),
+        tertiaryContainer = container,
+        onTertiaryContainer = primary,
         background = bg,
         onBackground = Color(0xFF0F172A),
         surface = Color(0xFFFFFFFF),
         onSurface = Color(0xFF0F172A),
-        surfaceVariant = Color(0xFFF1F5F9),
+        surfaceVariant = if (pastelTheme == PastelTheme.SWISS_MINIMAL) Color(0xFFF4F4F5) else Color(0xFFF1F5F9),
         onSurfaceVariant = Color(0xFF64748B),
         surfaceContainer = Color(0xFFFFFFFF),
         surfaceContainerHigh = Color(0xFFF8FAFC),
         surfaceContainerHighest = Color(0xFFF1F5F9),
         surfaceContainerLow = Color(0xFFFDFDFE),
         surfaceContainerLowest = Color(0xFFFFFFFF),
-        outline = Color(0xFFE2E8F0),
+        outline = if (pastelTheme == PastelTheme.SWISS_MINIMAL) Color(0xFFE4E4E7) else Color(0xFFE2E8F0),
         outlineVariant = Color(0xFFCBD5E1),
         error = ScreeneryRecordRed,
         onError = Color.White
@@ -103,9 +103,54 @@ fun createPastelDarkColorScheme(pastelTheme: PastelTheme): ColorScheme {
     val secondary = Color(pastelTheme.secondaryColor)
     val container = Color(pastelTheme.darkContainerColor)
 
+    val (bg, surface, surfaceVar, outlineColor) = when (pastelTheme) {
+        PastelTheme.MIDNIGHT_OLED -> Quad(
+            Color(0xFF000000), // True pitch black for OLED displays
+            Color(0xFF09090B),
+            Color(0xFF18181B),
+            Color(0xFF27272A)
+        )
+        PastelTheme.CYBER_NEON -> Quad(
+            Color(0xFF080512),
+            Color(0xFF120C26),
+            Color(0xFF1E1438),
+            Color(0xFF3B1E6D)
+        )
+        PastelTheme.EMERALD_MATRIX -> Quad(
+            Color(0xFF030D08),
+            Color(0xFF081810),
+            Color(0xFF0D251A),
+            Color(0xFF123B29)
+        )
+        PastelTheme.SWISS_MINIMAL -> Quad(
+            Color(0xFF09090B),
+            Color(0xFF141416),
+            Color(0xFF202024),
+            Color(0xFF2E2E33)
+        )
+        PastelTheme.NORDIC_ICE -> Quad(
+            Color(0xFF041017),
+            Color(0xFF081C26),
+            Color(0xFF0E2A38),
+            Color(0xFF173E52)
+        )
+        PastelTheme.SUNSET_AURORA -> Quad(
+            Color(0xFF120603),
+            Color(0xFF1F0C07),
+            Color(0xFF2E130B),
+            Color(0xFF4D1E12)
+        )
+        else -> Quad(
+            Color(0xFF0A0E1A),
+            Color(0xFF121829),
+            Color(0xFF1E293B),
+            Color(0xFF334155)
+        )
+    }
+
     return darkColorScheme(
         primary = primary,
-        onPrimary = Color.Black,
+        onPrimary = if (pastelTheme == PastelTheme.SWISS_MINIMAL) Color.Black else Color.Black,
         primaryContainer = container,
         onPrimaryContainer = Color(0xFFF8FAFC),
         secondary = secondary,
@@ -114,25 +159,27 @@ fun createPastelDarkColorScheme(pastelTheme: PastelTheme): ColorScheme {
         onSecondaryContainer = Color(0xFFF1F5F9),
         tertiary = secondary,
         onTertiary = Color.Black,
-        tertiaryContainer = Color(0xFF3B0764),
+        tertiaryContainer = container,
         onTertiaryContainer = Color(0xFFF3E8FF),
-        background = Color(0xFF0A0E1A),
+        background = bg,
         onBackground = Color(0xFFF8FAFC),
-        surface = Color(0xFF121829),
+        surface = surface,
         onSurface = Color(0xFFF8FAFC),
-        surfaceVariant = Color(0xFF1E293B),
+        surfaceVariant = surfaceVar,
         onSurfaceVariant = Color(0xFF94A3B8),
-        surfaceContainer = Color(0xFF141C30),
-        surfaceContainerHigh = Color(0xFF1B243B),
-        surfaceContainerHighest = Color(0xFF24304D),
-        surfaceContainerLow = Color(0xFF0E1424),
-        surfaceContainerLowest = Color(0xFF080C17),
-        outline = Color(0xFF334155),
+        surfaceContainer = surface,
+        surfaceContainerHigh = surfaceVar,
+        surfaceContainerHighest = outlineColor,
+        surfaceContainerLow = bg,
+        surfaceContainerLowest = bg,
+        outline = outlineColor,
         outlineVariant = Color(0xFF475569),
         error = ScreeneryRecordRed,
         onError = Color.White
     )
 }
+
+private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
 // Material You Expressive Shapes
 val ScreeneryShapes = Shapes(
