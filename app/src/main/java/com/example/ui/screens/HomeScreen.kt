@@ -122,6 +122,7 @@ fun HomeScreen(
     onDetailsRecording: (RecordingItem) -> Unit,
     onThemeSelect: (PastelTheme) -> Unit = {},
     onApplyPreset: (RecordingConfig) -> Unit = {},
+    thermalState: com.example.engine.DeviceThermalState = com.example.engine.DeviceThermalState(),
     modifier: Modifier = Modifier
 ) {
     val dimens = LocalExpressiveDimens.current
@@ -285,6 +286,7 @@ fun HomeScreen(
             HeroRecordingCard(
                 recordingStatus = recordingStatus,
                 config = config,
+                thermalState = thermalState,
                 onStartClick = onStartRecordingClick,
                 onPauseResumeClick = onPauseResumeClick,
                 onStopClick = onStopRecordingClick
@@ -357,6 +359,68 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 10.dp))
             ConfigBadgesRow(config = config, onBadgeClick = onSeeAllQuickSettings)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (config.hideFloatingBarCompletely) "🙈 Float Hidden" else "🫧 Float Bubble",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (config.noiseReductionEnabled) "🔇 Noise Reduced" else "🎙️ Raw Audio",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "🌡️ ${thermalState.formattedTemp}",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (thermalState.isOverheating) Color(0xFFEF4444) else if (thermalState.isWarm) Color(0xFFF59E0B) else MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
         }
 
         // Recent Recordings Section
@@ -429,6 +493,7 @@ fun HomeScreen(
 private fun HeroRecordingCard(
     recordingStatus: RecordingStatus,
     config: RecordingConfig,
+    thermalState: com.example.engine.DeviceThermalState = com.example.engine.DeviceThermalState(),
     onStartClick: () -> Unit,
     onPauseResumeClick: () -> Unit,
     onStopClick: () -> Unit
@@ -463,6 +528,41 @@ private fun HeroRecordingCard(
                 .padding(if (isCompact) 16.dp else 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Real-Time Hardware Overheating Warning Alert
+            if (config.temperatureWarningEnabled && (thermalState.isWarm || thermalState.isOverheating)) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (thermalState.isOverheating) Color(0xFF7F1D1D) else Color(0xFF78350F)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .testTag("thermal_warning_card")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = if (thermalState.isOverheating) "🔥" else "⚠️", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${thermalState.statusLabel} • ${thermalState.formattedTemp}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = Color.White
+                            )
+                            Text(
+                                text = thermalState.warningMessage ?: "Device running warm. Performance throttling may occur.",
+                                fontSize = 10.5.sp,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
+                }
+            }
+
             // Live Status Indicator Pill
             Box(
                 modifier = Modifier
@@ -619,6 +719,28 @@ private fun HeroRecordingCard(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (config.controlPanelQuickRecordEnabled) {
+                    Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "📲", fontSize = 12.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Control panel ready in status bar for in-game recording",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
             } else {
                 // Controls during recording: Pause/Resume + Stop
                 Row(

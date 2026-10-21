@@ -10,6 +10,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.model.AppThemeMode
 import com.example.data.model.AudioSourceOption
 import com.example.data.model.DeviceCapability
+import com.example.data.model.MobileFrameStyle
+import com.example.data.model.NoiseReductionMode
 import com.example.data.model.PastelTheme
 import com.example.data.model.RecordingConfig
 import com.example.data.model.RecordingItem
@@ -17,7 +19,10 @@ import com.example.data.model.VideoAspectRatio
 import com.example.data.model.VideoFps
 import com.example.data.model.VideoOrientation
 import com.example.data.model.VideoResolution
+import com.example.data.model.VoiceEffect
 import com.example.data.repository.RecordingRepository
+import com.example.engine.DeviceThermalMonitor
+import com.example.engine.DeviceThermalState
 import com.example.engine.GalleryHelper
 import com.example.engine.VideoTrimmer
 import com.example.service.ScreenRecordingService
@@ -42,10 +47,18 @@ sealed interface ValidationResult {
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = RecordingRepository(application)
+    private val thermalMonitor = DeviceThermalMonitor(application)
 
     val recordingStatus = ScreenRecordingService.recordingStatus
     val deviceCapability: StateFlow<DeviceCapability> = repository.deviceCapability
     val currentConfig: StateFlow<RecordingConfig> = repository.currentConfig
+    val thermalState: StateFlow<DeviceThermalState> = thermalMonitor.thermalState
+
+    init {
+        if (currentConfig.value.controlPanelQuickRecordEnabled) {
+            ScreenRecordingService.showStandbyControlPanel(application)
+        }
+    }
 
     val allRecordings: StateFlow<List<RecordingItem>> = repository.allRecordings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -147,6 +160,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateUserProfile(name: String, avatar: String) {
         repository.updateConfig(currentConfig.value.copy(userName = name, userAvatarEmoji = avatar))
+    }
+
+    fun toggleNoiseReduction(enabled: Boolean) {
+        repository.updateConfig(currentConfig.value.copy(noiseReductionEnabled = enabled))
+    }
+
+    fun updateNoiseReductionMode(mode: NoiseReductionMode) {
+        repository.updateConfig(currentConfig.value.copy(noiseReductionMode = mode))
+    }
+
+    fun updateVoiceEffect(effect: VoiceEffect) {
+        repository.updateConfig(currentConfig.value.copy(voiceEffect = effect))
+    }
+
+    fun toggleHideFloatingBarCompletely(enabled: Boolean) {
+        repository.updateConfig(currentConfig.value.copy(hideFloatingBarCompletely = enabled))
+    }
+
+    fun toggleControlPanelQuickRecord(enabled: Boolean) {
+        repository.updateConfig(currentConfig.value.copy(controlPanelQuickRecordEnabled = enabled))
+        if (enabled) {
+            ScreenRecordingService.showStandbyControlPanel(getApplication())
+        } else {
+            ScreenRecordingService.hideStandbyControlPanel(getApplication())
+        }
+    }
+
+    fun toggleTemperatureWarning(enabled: Boolean) {
+        repository.updateConfig(currentConfig.value.copy(temperatureWarningEnabled = enabled))
+    }
+
+    fun updateMobileFrameStyle(style: MobileFrameStyle) {
+        repository.updateConfig(currentConfig.value.copy(mobileFrameStyle = style))
     }
 
     fun pauseRecording() {
@@ -284,5 +330,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _isInterpolating.value = false
             onFinished(newItem != null, newItem)
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        thermalMonitor.stop()
     }
 }

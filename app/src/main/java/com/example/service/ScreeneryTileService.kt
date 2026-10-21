@@ -47,23 +47,21 @@ class ScreeneryTileService : TileService() {
             }
             startService(stopIntent)
         } else {
-            // Open Screenery to start recording
-            val mainIntent = Intent(this, MainActivity::class.java).apply {
+            // Start recording instantly via translucent QuickRecordActivity without displacing current game
+            val quickIntent = Intent(this, QuickRecordActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("auto_start_prompt", true)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                // Android 14+ startActivityAndCollapse requires PendingIntent
                 val pendingIntent = android.app.PendingIntent.getActivity(
                     this,
                     0,
-                    mainIntent,
+                    quickIntent,
                     android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
                 )
                 startActivityAndCollapse(pendingIntent)
             } else {
                 @Suppress("DEPRECATION")
-                startActivityAndCollapse(mainIntent)
+                startActivityAndCollapse(quickIntent)
             }
         }
     }

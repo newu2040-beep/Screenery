@@ -78,6 +78,7 @@ class ScreenRecordingService : Service() {
     private var actualDurationMs: Long = 0L
     private var recordingWidth = 1080
     private var recordingHeight = 1920
+    private var thermalMonitor: com.example.engine.DeviceThermalMonitor? = null
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private lateinit var repository: RecordingRepository
@@ -86,6 +87,7 @@ class ScreenRecordingService : Service() {
         private const val TAG = "ScreenRecordingService"
         const val CHANNEL_ID = "screenery_recording_channel"
         const val NOTIFICATION_ID = 1001
+        const val STANDBY_NOTIFICATION_ID = 1002
 
         const val ACTION_START = "com.screenery.recorder.ACTION_START"
         const val ACTION_PAUSE = "com.screenery.recorder.ACTION_PAUSE"
@@ -100,6 +102,88 @@ class ScreenRecordingService : Service() {
 
         var activeServiceInstance: ScreenRecordingService? = null
             private set
+
+        /**
+         * Posts a persistent Standby Quick Control Panel in the notification drawer
+         * allowing users to start recording their screen or gameplay directly without reopening the app.
+         */
+        fun showStandbyControlPanel(context: Context) {
+            val repo = RecordingRepository(context.applicationContext)
+            if (!repo.currentConfig.value.controlPanelQuickRecordEnabled) return
+            // Don't show standby if actively recording
+            if (_recordingStatus.value.isRecording) return
+
+            val manager = context.getSystemService(NotificationManager::class.java) ?: return
+
+            val startIntent = PendingIntent.getActivity(
+                context,
+                201,
+                Intent(context, QuickRecordActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val openAppIntent = PendingIntent.getActivity(
+                context,
+                202,
+                Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val startAction = NotificationCompat.Action.Builder(
+                R.drawable.ic_notification_record,
+                "🔴 Start Recording",
+                startIntent
+            ).build()
+
+            val openAction = NotificationCompat.Action.Builder(
+                android.R.drawable.ic_menu_manage,
+                "Studio Setup",
+                openAppIntent
+            ).build()
+
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setContentTitle("Screenery Control Panel • Ready")
+                .setContentText("Tap Start to record gameplay or screen directly without opening app")
+                .setSubText("Control Panel")
+                .setSmallIcon(R.drawable.ic_notification_record)
+                .setContentIntent(openAppIntent)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .addAction(startAction)
+                .addAction(openAction)
+                .build()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    "Screenery Recording Service",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Screen recording controls: Pause, Resume, Stop, and elapsed time counter"
+                    setShowBadge(false)
+                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                }
+                manager.createNotificationChannel(channel)
+            }
+
+            try {
+                manager.notify(STANDBY_NOTIFICATION_ID, notification)
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot post standby control panel notification", e)
+            }
+        }
+
+        fun hideStandbyControlPanel(context: Context) {
+            val manager = context.getSystemService(NotificationManager::class.java) ?: return
+            manager.cancel(STANDBY_NOTIFICATION_ID)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -108,12 +192,14 @@ class ScreenRecordingService : Service() {
         super.onCreate()
         activeServiceInstance = this
         repository = RecordingRepository(applicationContext)
+        thermalMonitor = com.example.engine.DeviceThermalMonitor(applicationContext)
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
+                hideStandbyControlPanel(this)
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
                 val dataIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableExtra(EXTRA_DATA_INTENT, Intent::class.java)
@@ -246,7 +332,13 @@ class ScreenRecordingService : Service() {
                                     MediaRecorder.AudioSource.MIC
                                 }
                             }
-                            AudioSourceOption.MICROPHONE -> MediaRecorder.AudioSource.MIC
+                            AudioSourceOption.MICROPHONE -> {
+                                if (currentConfig.noiseReductionEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                    MediaRecorder.AudioSource.VOICE_COMMUNICATION
+                                } else {
+                                    MediaRecorder.AudioSource.MIC
+                                }
+                            }
                             AudioSourceOption.NONE -> MediaRecorder.AudioSource.MIC
                         }
                         setAudioSource(audioSource)
@@ -345,8 +437,8 @@ class ScreenRecordingService : Service() {
             startTimer()
             startSafetyMonitors()
 
-            // Optional Floating overlay
-            if (currentConfig.floatingControls && android.provider.Settings.canDrawOverlays(this)) {
+            // Optional Floating overlay - completely hidden if user configured hideFloatingBarCompletely
+            if (currentConfig.floatingControls && !currentConfig.hideFloatingBarCompletely && android.provider.Settings.canDrawOverlays(this)) {
                 try {
                     startService(Intent(this, FloatingControlService::class.java))
                 } catch (_: Exception) {}
@@ -489,6 +581,9 @@ class ScreenRecordingService : Service() {
             } catch (_: Exception) {}
 
             stopForeground(STOP_FOREGROUND_REMOVE)
+            if (currentConfig.controlPanelQuickRecordEnabled) {
+                showStandbyControlPanel(applicationContext)
+            }
             stopSelf()
         }
     }
@@ -497,6 +592,7 @@ class ScreenRecordingService : Service() {
         timerJob?.cancel()
         autoStopJob?.cancel()
         storageMonitorJob?.cancel()
+        thermalMonitor?.stop()
 
         try {
             mediaRecorder?.reset()
@@ -517,6 +613,8 @@ class ScreenRecordingService : Service() {
 
     override fun onDestroy() {
         cleanup()
+        thermalMonitor?.stop()
+        thermalMonitor = null
         activeServiceInstance = null
         super.onDestroy()
     }
@@ -542,6 +640,10 @@ class ScreenRecordingService : Service() {
         val seconds = elapsedSeconds % 60
         val timeString = "%02d:%02d".format(minutes, seconds)
         val isPaused = _recordingStatus.value.isPaused
+
+        val thermal = thermalMonitor?.thermalState?.value
+        val isOverheating = currentConfig.temperatureWarningEnabled && (thermal?.isOverheating == true || thermal?.isWarm == true)
+        val thermalWarningText = if (isOverheating) " • ⚠️ ${thermal?.formattedTemp} Warm" else ""
 
         val openAppIntent = PendingIntent.getActivity(
             this,
@@ -590,17 +692,23 @@ class ScreenRecordingService : Service() {
             stopIntent
         ).build()
 
-        val title = if (isPaused) "⏸ Paused ($timeString)" else "🔴 Recording ($timeString)"
-        val content = if (isPaused) {
+        val title = if (isPaused) "⏸ Paused ($timeString)$thermalWarningText" else "🔴 Recording ($timeString)$thermalWarningText"
+        val content = if (isOverheating && thermal?.warningMessage != null) {
+            thermal.warningMessage
+        } else if (isPaused) {
             "Paused at $timeString • Tap Resume to continue"
         } else {
-            "${currentConfig.resolution.label} • ${currentConfig.fps.fps} FPS • ${currentConfig.audioSource.label}"
+            var info = "${currentConfig.resolution.label} • ${currentConfig.fps.fps} FPS • ${currentConfig.audioSource.label}"
+            if (currentConfig.noiseReductionEnabled && currentConfig.audioSource != AudioSourceOption.NONE) {
+                info += " • Noise Suppressed"
+            }
+            info
         }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(content)
-            .setSubText("Screenery")
+            .setSubText(if (isOverheating) "⚠️ Thermal Warning" else "Screenery")
             .setSmallIcon(R.drawable.ic_notification_record)
             .setContentIntent(openAppIntent)
             .setOngoing(true)

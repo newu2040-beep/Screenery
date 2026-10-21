@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Context
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -21,17 +22,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
@@ -42,11 +50,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -71,11 +82,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.example.data.model.MobileFrameStyle
 import com.example.data.model.RecordingItem
+import com.example.data.model.VoiceEffect
+import com.example.ui.components.MobileDeviceFrame
 import com.example.ui.theme.ScreeneryRecordRed
 import kotlinx.coroutines.delay
 import java.io.File
@@ -106,12 +121,24 @@ fun PlayerScreen(
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
 
+    var currentFrameStyle by remember { mutableStateOf(MobileFrameStyle.MINIMAL_SLIM) }
+    var isPortraitFrame by remember { mutableStateOf(item.height > item.width) }
+    var activeVoiceEffect by remember { mutableStateOf(VoiceEffect.NATURAL) }
+
     val exoPlayer = remember(item.filePath) {
         ExoPlayer.Builder(context).build().apply {
             if (fileExists) {
                 setMediaItem(MediaItem.fromUri(Uri.fromFile(videoFile)))
                 prepare()
             }
+        }
+    }
+
+    LaunchedEffect(activeVoiceEffect, playbackSpeed) {
+        if (fileExists) {
+            try {
+                exoPlayer.playbackParameters = PlaybackParameters(playbackSpeed, activeVoiceEffect.pitchMultiplier)
+            } catch (_: Exception) {}
         }
     }
 
@@ -137,6 +164,8 @@ fun PlayerScreen(
     }
 
     val totalDurationMs = if (fileExists && exoPlayer.duration > 0) exoPlayer.duration else item.durationMs
+
+    BackHandler(onBack = onBack)
 
     Column(
         modifier = modifier
@@ -207,150 +236,316 @@ fun PlayerScreen(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Player Container
+            // Player Container with Mobile Device Frame
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(20.dp)),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Black)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        if (fileExists) {
-                            AndroidView(
-                                factory = { ctx ->
-                                    PlayerView(ctx).apply {
-                                        player = exoPlayer
-                                        useController = false
-                                    }
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(Color(0xFF1E1B4B), Color(0xFF312E81))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Preview • ${item.width}x${item.height} @ ${item.fps}fps",
-                                    fontSize = 13.sp,
-                                    color = Color.White.copy(alpha = 0.6f)
-                                )
-                            }
-                        }
+                    val frameModifier = if (isPortraitFrame) {
+                        Modifier
+                            .widthIn(max = 290.dp)
+                            .fillMaxWidth(0.72f)
+                            .aspectRatio(9f / 16f)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                    }
 
-                        // Center Play/Pause button
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.55f))
-                                .clickable {
-                                    if (isPlaying) {
-                                        exoPlayer.pause()
-                                        isPlaying = false
-                                    } else {
-                                        if (fileExists) {
-                                            exoPlayer.play()
-                                        }
-                                        isPlaying = !isPlaying
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-
-                        // Bottom Player Controls Strip
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
-                                    )
-                                )
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Column {
-                                Slider(
-                                    value = currentPositionMs.toFloat().coerceIn(0f, totalDurationMs.toFloat().coerceAtLeast(1f)),
-                                    onValueChange = { pos ->
-                                        currentPositionMs = pos.toLong()
-                                        if (fileExists) {
-                                            exoPlayer.seekTo(currentPositionMs)
+                    MobileDeviceFrame(
+                        frameStyle = currentFrameStyle,
+                        isPortrait = isPortraitFrame,
+                        modifier = frameModifier
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            if (fileExists) {
+                                AndroidView(
+                                    factory = { ctx ->
+                                        PlayerView(ctx).apply {
+                                            player = exoPlayer
+                                            useController = false
                                         }
                                     },
-                                    valueRange = 0f..totalDurationMs.toFloat().coerceAtLeast(1f),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colorScheme.primary,
-                                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                                    ),
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxSize()
                                 )
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(Color(0xFF1E1B4B), Color(0xFF312E81))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "${formatTimer(currentPositionMs)} / ${formatTimer(totalDurationMs)}",
-                                        fontSize = 12.sp,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Medium
+                                        text = "Preview • ${item.width}x${item.height} @ ${item.fps}fps",
+                                        fontSize = 13.sp,
+                                        color = Color.White.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+
+                            // Center Play/Pause button
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.55f))
+                                    .clickable {
+                                        if (isPlaying) {
+                                            exoPlayer.pause()
+                                            isPlaying = false
+                                        } else {
+                                            if (fileExists) {
+                                                exoPlayer.play()
+                                            }
+                                            isPlaying = !isPlaying
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+
+                            // Bottom Player Controls Strip
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                                        )
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Column {
+                                    Slider(
+                                        value = currentPositionMs.toFloat().coerceIn(0f, totalDurationMs.toFloat().coerceAtLeast(1f)),
+                                        onValueChange = { pos ->
+                                            currentPositionMs = pos.toLong()
+                                            if (fileExists) {
+                                                exoPlayer.seekTo(currentPositionMs)
+                                            }
+                                        },
+                                        valueRange = 0f..totalDurationMs.toFloat().coerceAtLeast(1f),
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = MaterialTheme.colorScheme.primary,
+                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
                                     )
 
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        // Speed button
-                                        Box {
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(Color.White.copy(alpha = 0.2f))
-                                                    .clickable { showSpeedMenu = true }
-                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                                            ) {
-                                                Text(
-                                                    text = "${playbackSpeed}x",
-                                                    fontSize = 11.sp,
-                                                    color = Color.White,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${formatTimer(currentPositionMs)} / ${formatTimer(totalDurationMs)}",
+                                            fontSize = 12.sp,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium
+                                        )
 
-                                            DropdownMenu(
-                                                expanded = showSpeedMenu,
-                                                onDismissRequest = { showSpeedMenu = false }
-                                            ) {
-                                                listOf(0.5f, 1f, 1.25f, 1.5f, 2f).forEach { spd ->
-                                                    DropdownMenuItem(
-                                                        text = { Text("${spd}x") },
-                                                        onClick = {
-                                                            playbackSpeed = spd
-                                                            exoPlayer.setPlaybackSpeed(spd)
-                                                            showSpeedMenu = false
-                                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            // Speed button
+                                            Box {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(Color.White.copy(alpha = 0.2f))
+                                                        .clickable { showSpeedMenu = true }
+                                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "${playbackSpeed}x",
+                                                        fontSize = 11.sp,
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.Bold
                                                     )
+                                                }
+
+                                                DropdownMenu(
+                                                    expanded = showSpeedMenu,
+                                                    onDismissRequest = { showSpeedMenu = false }
+                                                ) {
+                                                    listOf(0.5f, 1f, 1.25f, 1.5f, 2f).forEach { spd ->
+                                                        DropdownMenuItem(
+                                                            text = { Text("${spd}x") },
+                                                            onClick = {
+                                                                playbackSpeed = spd
+                                                                exoPlayer.setPlaybackSpeed(spd)
+                                                                showSpeedMenu = false
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Mobile Device Frame Customizer
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.PhoneAndroid,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Mobile Device Frame",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            // Orientation switch
+                            Surface(
+                                onClick = { isPortraitFrame = !isPortraitFrame },
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 10.dp)
+                                ) {
+                                    Text(
+                                        text = if (isPortraitFrame) "📱 9:16 Portrait" else "🖥️ 16:9 Landscape",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(MobileFrameStyle.entries) { style ->
+                                val isSelected = currentFrameStyle == style
+                                Surface(
+                                    onClick = { currentFrameStyle = style },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.testTag("frame_style_${style.name}")
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = style.displayName,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Real-Time Voice Effects Processor
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.GraphicEq,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Studio Voice Effects",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = "${activeVoiceEffect.iconEmoji} ${activeVoiceEffect.displayName}",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Real-time vocal pitch and harmonic resonance filters",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(VoiceEffect.entries) { effect ->
+                                val isSelected = activeVoiceEffect == effect
+                                Surface(
+                                    onClick = { activeVoiceEffect = effect },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.testTag("voice_effect_${effect.name}")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = effect.iconEmoji, fontSize = 14.sp)
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                        Text(
+                                            text = effect.displayName,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
@@ -432,6 +627,11 @@ fun PlayerScreen(
                         Row(modifier = Modifier.fillMaxWidth()) {
                             InfoCol(modifier = Modifier.weight(1f), label = "Codec", value = item.codec)
                             InfoCol(modifier = Modifier.weight(1f), label = "Audio Source", value = item.audioSource)
+                        }
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            InfoCol(modifier = Modifier.weight(1f), label = "Noise Filter", value = "Studio Clarity Active")
+                            InfoCol(modifier = Modifier.weight(1f), label = "Active Voice", value = "${activeVoiceEffect.iconEmoji} ${activeVoiceEffect.displayName}")
                         }
                     }
                 }

@@ -10,6 +10,8 @@ import com.example.data.model.AudioSourceOption
 import com.example.data.model.CompressionRateControl
 import com.example.data.model.DeblockingFilter
 import com.example.data.model.DeviceCapability
+import com.example.data.model.MobileFrameStyle
+import com.example.data.model.NoiseReductionMode
 import com.example.data.model.OpticalFlowMode
 import com.example.data.model.PastelTheme
 import com.example.data.model.RecordingConfig
@@ -20,6 +22,7 @@ import com.example.data.model.VideoCodecFormat
 import com.example.data.model.VideoFps
 import com.example.data.model.VideoOrientation
 import com.example.data.model.VideoResolution
+import com.example.data.model.VoiceEffect
 import com.example.engine.DeviceDetector
 import com.example.engine.GalleryHelper
 import com.example.engine.OpticalFlowInterpolator
@@ -199,6 +202,13 @@ class RecordingRepository(private val context: Context) {
         val pastelOrdinal = prefs.getInt("cfg_pastel_theme", PastelTheme.LAVENDER.ordinal)
         val userName = prefs.getString("cfg_user_name", "Creator") ?: "Creator"
         val userAvatar = prefs.getString("cfg_user_avatar", "🎬") ?: "🎬"
+        val noiseReduction = prefs.getBoolean("cfg_noise_reduction", true)
+        val noiseModeOrdinal = prefs.getInt("cfg_noise_mode", NoiseReductionMode.ADAPTIVE_STUDIO.ordinal)
+        val voiceEffectOrdinal = prefs.getInt("cfg_voice_effect", VoiceEffect.NATURAL.ordinal)
+        val hideFloatingCompletely = prefs.getBoolean("cfg_hide_floating_completely", false)
+        val quickRecordControlPanel = prefs.getBoolean("cfg_quick_record_panel", true)
+        val tempWarning = prefs.getBoolean("cfg_temp_warning", true)
+        val frameOrdinal = prefs.getInt("cfg_mobile_frame", MobileFrameStyle.MINIMAL_SLIM.ordinal)
 
         val resolution = VideoResolution.entries.getOrElse(resOrdinal) { VideoResolution.RES_1080P }
         val aspectRatio = VideoAspectRatio.entries.getOrElse(aspectOrdinal) { VideoAspectRatio.MATCH_DEVICE }
@@ -213,6 +223,9 @@ class RecordingRepository(private val context: Context) {
         val orient = VideoOrientation.entries.getOrElse(orientOrdinal) { VideoOrientation.AUTO }
         val themeMode = AppThemeMode.entries.getOrElse(themeOrdinal) { AppThemeMode.SYSTEM }
         val pastelTheme = PastelTheme.entries.getOrElse(pastelOrdinal) { PastelTheme.LAVENDER }
+        val noiseMode = NoiseReductionMode.entries.getOrElse(noiseModeOrdinal) { NoiseReductionMode.ADAPTIVE_STUDIO }
+        val voiceEffect = VoiceEffect.entries.getOrElse(voiceEffectOrdinal) { VoiceEffect.NATURAL }
+        val frameStyle = MobileFrameStyle.entries.getOrElse(frameOrdinal) { MobileFrameStyle.MINIMAL_SLIM }
 
         return RecordingConfig(
             resolution = resolution,
@@ -229,11 +242,18 @@ class RecordingRepository(private val context: Context) {
             audioSource = audio,
             audioSampleRate = audioSampleRate,
             audioBitrateKbps = audioBitrate,
+            noiseReductionEnabled = noiseReduction,
+            noiseReductionMode = noiseMode,
+            voiceEffect = voiceEffect,
             orientation = orient,
             countdownSeconds = countdown,
             showTouches = showTouches,
             floatingControls = floating,
             autoHideFloatingBar = autoHideFloating,
+            hideFloatingBarCompletely = hideFloatingCompletely,
+            controlPanelQuickRecordEnabled = quickRecordControlPanel,
+            temperatureWarningEnabled = tempWarning,
+            mobileFrameStyle = frameStyle,
             autoStopMinutes = autoStop,
             hideStatusBar = hideStatusBar,
             autoSaveToGallery = autoSave,
@@ -261,11 +281,18 @@ class RecordingRepository(private val context: Context) {
             .putInt("cfg_audio", config.audioSource.ordinal)
             .putInt("cfg_audio_sample_rate", config.audioSampleRate)
             .putInt("cfg_audio_bitrate", config.audioBitrateKbps)
+            .putBoolean("cfg_noise_reduction", config.noiseReductionEnabled)
+            .putInt("cfg_noise_mode", config.noiseReductionMode.ordinal)
+            .putInt("cfg_voice_effect", config.voiceEffect.ordinal)
             .putInt("cfg_orient", config.orientation.ordinal)
             .putInt("cfg_countdown", config.countdownSeconds)
             .putBoolean("cfg_touches", config.showTouches)
             .putBoolean("cfg_floating", config.floatingControls)
             .putBoolean("cfg_autohide_floating", config.autoHideFloatingBar)
+            .putBoolean("cfg_hide_floating_completely", config.hideFloatingBarCompletely)
+            .putBoolean("cfg_quick_record_panel", config.controlPanelQuickRecordEnabled)
+            .putBoolean("cfg_temp_warning", config.temperatureWarningEnabled)
+            .putInt("cfg_mobile_frame", config.mobileFrameStyle.ordinal)
             .putInt("cfg_autostop", config.autoStopMinutes)
             .putBoolean("cfg_hide_statusbar", config.hideStatusBar)
             .putBoolean("cfg_autosave_gallery", config.autoSaveToGallery)

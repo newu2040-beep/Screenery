@@ -321,6 +321,48 @@ enum class PastelTheme(
     )
 }
 
+enum class NoiseReductionMode(val label: String, val description: String) {
+    OFF("Disabled", "Raw microphone feed without filtering"),
+    SUBTLE("Subtle Filter", "Reduces light room hum and fan noise"),
+    ADAPTIVE_STUDIO("Studio Clarity", "Hardware DSP noise suppressor + voice isolation"),
+    MAXIMUM("Aggressive Gate", "Maximum suppression for noisy outdoor environments")
+}
+
+enum class VoiceEffect(
+    val id: String,
+    val displayName: String,
+    val description: String,
+    val iconEmoji: String,
+    val pitchMultiplier: Float = 1.0f,
+    val speedMultiplier: Float = 1.0f
+) {
+    NATURAL("natural", "Natural Voice", "Original pure audio direct from microphone", "🎙️", 1.0f, 1.0f),
+    STUDIO_WARM("studio_warm", "Studio Radio", "Warm presence, enriched low-end broadcast tone", "📻", 0.92f, 1.0f),
+    PODCAST_CRISP("podcast_crisp", "Podcast Clarity", "Boosted highs and vocal articulation", "🎧", 1.08f, 1.0f),
+    DEEP_BASS("deep_bass", "Deep Bass", "Heavy resonant low-pitch vocal depth", "🔊", 0.78f, 1.0f),
+    CYBER_ROBOT("cyber_robot", "Cyber Synth", "Robotic electronic vocoder resonance", "🤖", 1.25f, 0.95f),
+    CHIPMUNK("chipmunk", "Helium Pitch", "Playful high-pitched animated comedic voice", "🐿️", 1.45f, 1.0f),
+    VINTAGE_TAPE("vintage_tape", "Vintage Tape", "Warm analog saturation and retro tape profile", "📼", 0.96f, 0.98f)
+}
+
+enum class MobileFrameStyle(
+    val displayName: String,
+    val description: String,
+    val cornerRadiusDp: Int,
+    val bezelWidthDp: Int,
+    val hasDynamicIsland: Boolean,
+    val hasCameraPunchHole: Boolean,
+    val hasSpeakerGrille: Boolean,
+    val frameColorLong: Long
+) {
+    NONE("No Frame", "Borderless raw screen recording", 0, 0, false, false, false, 0x00000000),
+    MINIMAL_SLIM("Minimal Slim", "Modern ultra-thin bezel with curved corners", 24, 6, false, true, false, 0xFF1E293B),
+    FLAGSHIP_PRO("Flagship Pro", "Polished titanium frame with dynamic pill island", 32, 8, true, false, true, 0xFF0F172A),
+    PIXEL_STUDIO("Pixel Modern", "Matte aluminum finish with centered camera hole", 28, 7, false, true, true, 0xFF334155),
+    CHROME_LUXURY("Glossy Silver", "Jewelry-grade polished chrome with glass reflection", 30, 9, false, true, true, 0xFFCBD5E1),
+    DARK_STEALTH("Dark Stealth", "Deep obsidian matte finish with stealth edges", 26, 6, false, true, false, 0xFF090D16)
+}
+
 data class RecordingConfig(
     val resolution: VideoResolution = VideoResolution.RES_1080P,
     val aspectRatio: VideoAspectRatio = VideoAspectRatio.MATCH_DEVICE,
@@ -336,11 +378,18 @@ data class RecordingConfig(
     val audioSource: AudioSourceOption = AudioSourceOption.MICROPHONE,
     val audioSampleRate: Int = 44100, // 44100, 48000, 96000 Hz
     val audioBitrateKbps: Int = 192, // 128, 192, 256, 320
+    val noiseReductionEnabled: Boolean = true,
+    val noiseReductionMode: NoiseReductionMode = NoiseReductionMode.ADAPTIVE_STUDIO,
+    val voiceEffect: VoiceEffect = VoiceEffect.NATURAL,
     val orientation: VideoOrientation = VideoOrientation.AUTO,
     val countdownSeconds: Int = 3, // 0 (Off), 3, 5, 10
     val showTouches: Boolean = false,
     val floatingControls: Boolean = true,
     val autoHideFloatingBar: Boolean = true, // Automatically hide floating bar while recording
+    val hideFloatingBarCompletely: Boolean = false, // Option to completely hide the floating bar while recording
+    val controlPanelQuickRecordEnabled: Boolean = true, // Standby Control Panel in notification drawer
+    val temperatureWarningEnabled: Boolean = true, // Real-time device temperature warnings
+    val mobileFrameStyle: MobileFrameStyle = MobileFrameStyle.MINIMAL_SLIM, // Mobile device frame style
     val autoStopMinutes: Int = 0, // 0 is disabled
     val hideStatusBar: Boolean = false,
     val autoSaveToGallery: Boolean = true,

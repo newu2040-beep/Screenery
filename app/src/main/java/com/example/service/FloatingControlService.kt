@@ -53,6 +53,10 @@ class FloatingControlService : Service() {
             }
 
             val repo = RecordingRepository(applicationContext)
+            if (repo.currentConfig.value.hideFloatingBarCompletely || !repo.currentConfig.value.floatingControls) {
+                stopSelf()
+                return
+            }
             autoHideEnabled = repo.currentConfig.value.autoHideFloatingBar
 
             windowManager = getSystemService(Context.WINDOW_SERVICE) as? WindowManager

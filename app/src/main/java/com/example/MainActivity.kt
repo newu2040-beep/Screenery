@@ -17,9 +17,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -284,7 +287,11 @@ class MainActivity : ComponentActivity() {
                         NavHost(
                             navController = navController,
                             startDestination = "home",
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            enterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(240)) { it / 5 } },
+                            exitTransition = { fadeOut(tween(200)) + slideOutHorizontally(tween(200)) { -it / 5 } },
+                            popEnterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(240)) { -it / 5 } },
+                            popExitTransition = { fadeOut(tween(200)) + slideOutHorizontally(tween(200)) { it / 5 } }
                         ) {
                             composable("home") {
                                 HomeScreen(

@@ -60,6 +60,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -84,6 +85,8 @@ import com.example.data.model.AudioSourceOption
 import com.example.data.model.CompressionRateControl
 import com.example.data.model.DeblockingFilter
 import com.example.data.model.DeviceCapability
+import com.example.data.model.MobileFrameStyle
+import com.example.data.model.NoiseReductionMode
 import com.example.data.model.OpticalFlowMode
 import com.example.data.model.PastelTheme
 import com.example.data.model.RecordingConfig
@@ -93,6 +96,8 @@ import com.example.data.model.VideoCodecFormat
 import com.example.data.model.VideoFps
 import com.example.data.model.VideoOrientation
 import com.example.data.model.VideoResolution
+import com.example.data.model.VoiceEffect
+import com.example.service.ScreenRecordingService
 import com.example.ui.theme.LocalCompactMode
 import com.example.ui.theme.LocalExpressiveDimens
 
@@ -1332,6 +1337,128 @@ fun SettingsScreen(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            OptionSwitchRow(
+                                title = "Studio Noise Reduction",
+                                subtitle = "Filters room echo, background hum, fan noise, and key clicks for clean speech",
+                                checked = localConfig.noiseReductionEnabled,
+                                onCheckedChange = {
+                                    val updated = localConfig.copy(noiseReductionEnabled = it)
+                                    localConfig = updated
+                                    onConfigChanged(updated)
+                                }
+                            )
+
+                            if (localConfig.noiseReductionEnabled) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Noise Suppression Mode",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    NoiseReductionMode.entries.forEach { mode ->
+                                        val isSelected = localConfig.noiseReductionMode == mode
+                                        PillSelector(
+                                            modifier = Modifier.weight(1f),
+                                            title = mode.label,
+                                            subtitle = mode.description,
+                                            selected = isSelected,
+                                            enabled = true,
+                                            onClick = {
+                                                val updated = localConfig.copy(noiseReductionMode = mode)
+                                                localConfig = updated
+                                                onConfigChanged(updated)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Studio Voice Effects Preset",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${localConfig.voiceEffect.iconEmoji} ${localConfig.voiceEffect.displayName}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Select active vocal enhancement or fun voice transformation",
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(VoiceEffect.entries) { effect ->
+                                    val isSelected = localConfig.voiceEffect == effect
+                                    Surface(
+                                        onClick = {
+                                            val updated = localConfig.copy(voiceEffect = effect)
+                                            localConfig = updated
+                                            onConfigChanged(updated)
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.testTag("settings_voice_${effect.name}")
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(text = effect.iconEmoji, fontSize = 14.sp)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Column {
+                                                Text(
+                                                    text = effect.displayName,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = effect.description,
+                                                    fontSize = 9.5.sp,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1379,9 +1506,80 @@ fun SettingsScreen(
                 }
             }
 
+            // Mobile Device Frame Section
+            item {
+                SectionHeader(title = "Default Mobile Device Frame")
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Player & Export Mobile Frame",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = localConfig.mobileFrameStyle.displayName,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Render recordings inside realistic flagship smartphone frames",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(MobileFrameStyle.entries) { frame ->
+                                val isSelected = localConfig.mobileFrameStyle == frame
+                                Surface(
+                                    onClick = {
+                                        val updated = localConfig.copy(mobileFrameStyle = frame)
+                                        localConfig = updated
+                                        onConfigChanged(updated)
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.testTag("settings_frame_${frame.name}")
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = frame.displayName,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = frame.description,
+                                            fontSize = 9.5.sp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Controls & Extra Features
             item {
-                SectionHeader(title = "Capture Options")
+                SectionHeader(title = "Capture & Control Options")
                 Spacer(modifier = Modifier.height(10.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -1390,8 +1588,26 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                         OptionSwitchRow(
+                            title = "Standby Control Panel in Notification Shade",
+                            subtitle = "Keep persistent quick controls in notification drawer to start, pause, resume & stop recording without reopening app",
+                            checked = localConfig.controlPanelQuickRecordEnabled,
+                            onCheckedChange = {
+                                val updated = localConfig.copy(controlPanelQuickRecordEnabled = it)
+                                localConfig = updated
+                                onConfigChanged(updated)
+                                if (it) {
+                                    ScreenRecordingService.showStandbyControlPanel(context)
+                                } else {
+                                    ScreenRecordingService.hideStandbyControlPanel(context)
+                                }
+                            }
+                        )
+
+                        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                        OptionSwitchRow(
                             title = "Floating Control Bubble",
-                            subtitle = "Draggable on-screen widget for recording status",
+                            subtitle = "Draggable on-screen widget for recording status & quick actions",
                             checked = localConfig.floatingControls,
                             onCheckedChange = {
                                 if (it && !Settings.canDrawOverlays(context)) {
@@ -1407,12 +1623,25 @@ fun SettingsScreen(
                             }
                         )
 
-                        if (localConfig.floatingControls) {
+                        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                        OptionSwitchRow(
+                            title = "Completely Hide Floating Bar While Recording",
+                            subtitle = "Hide floating toolbar entirely during recording so your screen and gameplay videos have zero overlay clutter",
+                            checked = localConfig.hideFloatingBarCompletely,
+                            onCheckedChange = {
+                                val updated = localConfig.copy(hideFloatingBarCompletely = it)
+                                localConfig = updated
+                                onConfigChanged(updated)
+                            }
+                        )
+
+                        if (localConfig.floatingControls && !localConfig.hideFloatingBarCompletely) {
                             androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                             OptionSwitchRow(
                                 title = "Auto-Hide Floating Bar While Recording",
-                                subtitle = "Hides floating widget during active recording so your video is clean. Use Notification panel to Pause/Resume/Stop.",
+                                subtitle = "Automatically fades the floating widget after 3 seconds of inactivity during active recording",
                                 checked = localConfig.autoHideFloatingBar,
                                 onCheckedChange = {
                                     val updated = localConfig.copy(autoHideFloatingBar = it)
@@ -1421,6 +1650,19 @@ fun SettingsScreen(
                                 }
                             )
                         }
+
+                        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                        OptionSwitchRow(
+                            title = "Real-Time Temperature & Overheating Warnings",
+                            subtitle = "Monitors device thermal status and provides live warning notifications if the CPU/battery overheats",
+                            checked = localConfig.temperatureWarningEnabled,
+                            onCheckedChange = {
+                                val updated = localConfig.copy(temperatureWarningEnabled = it)
+                                localConfig = updated
+                                onConfigChanged(updated)
+                            }
+                        )
 
                         androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
